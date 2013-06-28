@@ -1,0 +1,89 @@
+Long Parsed Items
+b  - block, { ... }
+"  - quote
+l  - list, comma seperated items, keywords processed
+p  - parameter list, same as list, but surrounded by parentheses
+q  - quoted text, quote delimiters allowed listed in brackets, quote used is passed to keyword
+c  - code
+C  - code in parentheses
+.  - Slurp, (anything goes)
+D  - Delimiter specified at use, (must occur twice at minimum, special handling for open/close things)
+
+Simple Items
+w  - word, alphanumeric starting with alpha
+n  - number, alphanumeric starting with number
+_  - whitespace
+
+Positioning
+^  - start of line
+$  - end of line
+<  - grab items before keyword in this statement
+>  - look ahead at next token
+
+Extra Behavior
+t       - terminate statement here
+{...}   - Data, Symbols to make available (used in blocks, code, parameter list, etc)
+
+Modifiers
+?     - Optional
+*     - Any number
++     - One or more
+
+Constructs
+(|) - this or that
+
+--------------------------
+
+"           '"'
+'           '"'
+`           '"'
+
+[           "l -]-"
+(           "c -)-"
+[[          "l -]]-"
+
+func        'w p? b t'
+meth        'w p? b t'
+sub         'b'
+type        'w C? b{meth with has} t'
+
+fennec      '(w|q{'"}) p? b t'
+
+declare     '(l|w+ p? >1)'
+
+sigil       'w'
+
+qq          'D . D . D'
+s           'D . D . D
+
+->          'w <'
++>          'w'
+~>          'w < w'
+
+]=[         'c -]-'
+
+//          '. $'
+
+if          '(< c|c b|C b) (-elsif- (c b|C b))* (-else- b)? t'
+
+load        '(w (-::- w)*|q)'
+
+try         'b (-catch- C b)? (-finally- b)? t'
+
+keyword     'w q b'
+
+
+-----------------------------------
+
+{
+    look: '<' or '>'
+    want: 'char'
+    modi: 'char'
+    syms: [...]
+    altr: ...
+    next: ...
+
+    look_idx: # token number from keyword, 1 is just before keyword, 2 is 2
+                before keyword, etc. If 0 then grab entire statement before
+                Not used for >
+}
