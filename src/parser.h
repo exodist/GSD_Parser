@@ -27,15 +27,6 @@ struct parser {
 
     keyword_check   *kcheck;
     keyword_pattern *kpatt;
-
-    enum {
-        ERROR_NONE = 0,
-        ERROR_MEMORY,
-        ERROR_SYNTAX,
-        ERROR_KEYWORD,
-        ERROR_OTHER
-    } error;
-    uint8_t *error_msg;
 };
 
 struct token {

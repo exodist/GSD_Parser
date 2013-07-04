@@ -45,12 +45,15 @@ int gsd_keyword_pattern_valid_mod( uint8_t a, uint8_t m ) {
     return 1;
 }
 
-uint8_t *gsd_keyword_pattern_normalize(parser *ps, uint8_t *pattern) {
+kparser *gsd_keyword_pattern_normalize(uint8_t *pattern) {
+    kparser *ps = malloc(sizeof(kparser));
+    if (!ps) return NULL;
+
     size_t len = strlen(pattern);
     uint8_t *new = malloc(len);
     if (!new) {
         ps->error = ERROR_MEMORY;
-        return NULL;
+        return ps;
     }
     memset(new, 0, len);
 
@@ -69,20 +72,22 @@ uint8_t *gsd_keyword_pattern_normalize(parser *ps, uint8_t *pattern) {
         ps->error = ERROR_KEYWORD;
         ps->error_msg = "Delimiter specified in keyword pattern, but only used once.";
         free(new);
-        return NULL;
+        return ps;
     }
 
-    return new;
+    ps->pattern = new;
+    ps->pointer = new;
+    return ps;
 }
 
-knode *gsd_keyword_pattern_compile(parser *ps, uint8_t **p) {
+knode *gsd_keyword_pattern_compile(kparser *p) {
     knode *start = NULL;
     knode *curr  = NULL;
-    while (**p != '\0' && **p != '|' && **p != ')') {
-        knode *n = gsd_keyword_pattern_atom(ps, p);
+    while (*(p->pointer) != '\0' && *(p->pointer) != '|' && *(p->pointer) != ')') {
+        knode *n = gsd_keyword_pattern_atom(p);
         if (!n) {
             free_knode( start );
-            ps->error = ERROR_MEMORY;
+            p->error = ERROR_MEMORY;
             return NULL;
         }
         if (!start) start = n;
@@ -98,68 +103,71 @@ knode *gsd_keyword_pattern_compile(parser *ps, uint8_t **p) {
     return start;
 }
 
-knode *gsd_keyword_pattern_atom(parser *ps, uint8_t **p) {
-    if (! gsd_keyword_pattern_valid_atom(**p)) {
-        ps->error = ERROR_KEYWORD;
-        ps->error_msg = "Invalid atom in keyword pattern";
+knode *gsd_keyword_pattern_atom(kparser *p) {
+    if (! gsd_keyword_pattern_valid_atom(*(p->pointer))) {
+        p->error = ERROR_KEYWORD;
+        p->error_msg = "Invalid atom in keyword pattern";
         return NULL;
     }
 
     knode *n = malloc( sizeof(knode) );
     if (!n) {
-        ps->error = ERROR_MEMORY;
+        p->error = ERROR_MEMORY;
         return NULL;
     }
     memset(n, 0, sizeof(knode));
 
-    n->want = **p;
-    (*p)++;
-    if (**p == '\0') {
+    n->want = *(p->pointer);
+    p->pointer++;
+    if (*(p->pointer) == '\0') {
         if (n->want == ')') {
-            ps->error = ERROR_KEYWORD;
-            ps->error_msg = "Unexpected end of pattern";
+            p->error = ERROR_KEYWORD;
+            p->error_msg = "Unexpected end of pattern";
         }
         return n;
     }
 
     int success = 1;
     if (n->want == '-') {
-        success = gsd_keyword_pattern_match(ps, n, p) ;
+        success = gsd_keyword_pattern_match(p, n) ;
     }
     else if (n->want == '(') {
-        success = gsd_keyword_pattern_alt(ps, n, p);
+        success = gsd_keyword_pattern_alt(p, n);
     }
-    else if (n->want == 'q' && **p == '{') {
-        success = gsd_keyword_pattern_delim(ps, n, p);
+    else if (n->want == 'q' && *(p->pointer) == '{') {
+        success = gsd_keyword_pattern_delim(p, n);
     }
-    else if (n->want == 'b' && **p == '{') {
-        success = gsd_keyword_pattern_syms(ps, n, p);
+    else if (n->want == 'b' && *(p->pointer) == '{') {
+        success = gsd_keyword_pattern_syms(p, n);
     }
 
     if (!success) {
-        ps->error = ERROR_MEMORY;
+        p->error = ERROR_MEMORY;
         free( n );
         return NULL;
     }
 
-    if (gsd_keyword_pattern_valid_mod(n->want, **p)) {
-        n->mod = **p;
-        (*p)++;
+    if (gsd_keyword_pattern_valid_mod(n->want, *(p->pointer))) {
+        n->mod = *(p->pointer);
+        p->pointer++;
     }
 
     return n;
 }
 
-uint8_t *gsd_keyword_pattern_string(uint8_t **p, uint8_t *term, size_t s) {
+uint8_t *gsd_keyword_pattern_string(kparser *p, uint8_t *term, size_t s) {
     size_t size = s;
     uint8_t *new = malloc(size);
-    if (!new) return NULL;
+    if (!new) {
+        p->error = ERROR_MEMORY;
+        return NULL;
+    }
     memset( new, 0, size );
 
     size_t ni = 0;
     while (1) {
         for( size_t ti = 0; term[ti] != '\0'; ti++ ) {
-            if ( **p == term[ti] ) return new;
+            if ( *(p->pointer) == term[ti] ) return new;
         }
 
         if (ni >= size - 1) {
@@ -167,53 +175,54 @@ uint8_t *gsd_keyword_pattern_string(uint8_t **p, uint8_t *term, size_t s) {
             void *c = realloc(new, size);
             if (!c) {
                 free( new );
+                p->error = ERROR_MEMORY;
                 return NULL;
             }
             new = c;
             memset( new + ni, 0, s );
         }
 
-        new[ni++] = **p;
-        (*p)++;
+        new[ni++] = *(p->pointer);
+        p->pointer++;
     }
 
     return new;
 }
 
-int gsd_keyword_pattern_match(parser *ps, knode *n, uint8_t **p) {
+int gsd_keyword_pattern_match(kparser *p, knode *n) {
     uint8_t *new = gsd_keyword_pattern_string( p, "-", MATCH_SIZE );
     if (!new) {
-        ps->error = ERROR_MEMORY;
+        p->error = ERROR_MEMORY;
         return 0;
     }
 
     n->data.match = new;
-    (*p)++;
+    p->pointer++;
 
     return 1;
 }
 
-int gsd_keyword_pattern_delim(parser *ps, knode *n, uint8_t **p) {
-    if (**p == '{') (*p)++;
+int gsd_keyword_pattern_delim(kparser *p, knode *n) {
+    if (*(p->pointer) == '{') *(p->pointer++);
     uint8_t *new = gsd_keyword_pattern_string( p, "}", MATCH_SIZE );
     if (!new) {
-        ps->error = ERROR_MEMORY;
+        p->error = ERROR_MEMORY;
         return 0;
     }
 
     n->data.match = new;
-    (*p)++;
+    p->pointer++;
 
     return 1;
 }
 
-int gsd_keyword_pattern_syms(parser *ps, knode *n, uint8_t **p) {
-    if (**p == '{') (*p)++;
+int gsd_keyword_pattern_syms(kparser *p, knode *n) {
+    if (*(p->pointer) == '{') p->pointer++;
 
     size_t count = SYM_SIZE;
     uint8_t **syms = malloc(sizeof(uint8_t *) * count);
     if (!syms) {
-        ps->error = ERROR_MEMORY;
+        p->error = ERROR_MEMORY;
         return 0;
     }
     memset( syms, 0, sizeof(uint8_t *) * count );
@@ -232,32 +241,32 @@ int gsd_keyword_pattern_syms(parser *ps, knode *n, uint8_t **p) {
         }
 
         syms[si++] = s;
-        if ( **p == '}' ) break;
-        (*p)++;
+        if ( *(p->pointer) == '}' ) break;
+        p->pointer++;
     }
 
-    (*p)++;
+    p->pointer++;
     n->data.syms = syms;
     return 1;
 
     SYMS_CLEANUP:
-    ps->error = ERROR_MEMORY;
+    p->error = ERROR_MEMORY;
     si = 0;
     while (syms[si] != NULL) free( syms[si++] );
     free(syms);
     return 0;
 }
 
-int gsd_keyword_pattern_alt(parser *ps, knode *n, uint8_t **p) {
+int gsd_keyword_pattern_alt(kparser *p, knode *n) {
     size_t count = ALT_SIZE;
     knode **alt = malloc(sizeof(knode *) * count);
     if (!alt) return 0;
     memset( alt, 0, sizeof(knode *) * count);
 
     size_t ai = 0;
-    while (**p != ')') {
-        if (**p == '|') (*p)++;
-        knode *n = gsd_keyword_pattern_compile(ps, p);
+    while (*(p->pointer) != ')') {
+        if (*(p->pointer) == '|') p->pointer++;
+        knode *n = gsd_keyword_pattern_compile(p);
         if (!n) goto ALT_CLEANUP;
 
         if (ai >= count - 1) {
@@ -271,7 +280,7 @@ int gsd_keyword_pattern_alt(parser *ps, knode *n, uint8_t **p) {
         alt[ai++] = n;
     }
 
-    (*p)++;
+    p->pointer++;
     n->data.alt = alt;
     return 1;
 
@@ -364,11 +373,9 @@ int main() {
     //uint8_t *kw = "(w|q{'\"}|(-a-|b))*q?b{foo,bar}?-foobar baz-t";
     uint8_t *kw = "( (w (w (n|q|L)-,-)* (n|q|L)-,-?) -;- | ((w l)|(w w)|l|w) (-;-|-=-) )";
     printf( "\n%s\n", kw );
-    uint8_t *norm = gsd_keyword_pattern_normalize(NULL, kw);
-    uint8_t *norm_mod = norm;
-    knode *kn = gsd_keyword_pattern_compile(NULL, &norm_mod);
+    kparser *p = gsd_keyword_pattern_normalize(kw);
+    knode *kn = gsd_keyword_pattern_compile(p);
     dump_knode(kn, 0, 0);
     free_knode( kn );
-    free( norm );
     return 0;
 }
