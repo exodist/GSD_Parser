@@ -2,7 +2,9 @@ Long Parsed Items
 b  - block, { ... }
 "  - quote
 l  - list, comma seperated items, keywords processed
-p  - parameter list, same as list, but surrounded by parentheses
+L  - parameter list, same as list, but surrounded by parentheses
+s  - Signature
+S  - Signature in parentheses
 q  - quoted text, quote delimiters allowed listed in brackets, quote used is passed to keyword
 c  - code
 C  - code in parentheses
@@ -19,6 +21,7 @@ Positioning
 $  - end of line
 <  - grab items before keyword in this statement
 >  - look ahead at next token
+/  - NoWhitespace
 
 Extra Behavior
 t       - terminate statement here
@@ -38,20 +41,45 @@ Constructs
 '           '"'
 `           '"'
 
+++          '(C|/w|<|w)'    If not followed by a space grab the next token,
+--          '(C|/w|<|w)'    otherwise bind left, if nothing left bind right
+
+::          '<
+
+{           "c -}-"
 [           "l -]-"
 (           "c -)-"
 [[          "l -]]-"
 
-func        'w p? b t'
-meth        'w p? b t'
+func        'w S? b t'
+meth        'w S? b t'
 sub         'b'
-type        'w C? b{meth with has} t'
+type        'w C? b{meth,with,has} t'
 
-fennec      '(w|q{'"}) p? b t'
+fennec      '(l|q) L? b t'
 
-declare     '(l|w+ p? >1)'
+#######
+    var thing x(...)
+    var thing x(...), y(...)
+    var thing x 1, y 1
+    var thing x "...", y "..."
 
-sigil       'w'
+    var thing x, y;
+    var thing x, y = ...;
+
+    var thing x;
+    var thing x = ...;
+
+    var x, y;
+    var x, y = ...
+
+    var x;
+    var x = ...;
+
+var         '( (w (w (n|q|L)-,-)* (n|q|L)-,-?) -;- | ((w l)|(w w)|l|w) (-;-|-=-) )'
+#######
+
+sigil       '/w'
 
 qq          'D . D . D'
 s           'D . D . D
@@ -64,7 +92,13 @@ s           'D . D . D
 
 //          '. $'
 
-if          '(< c|c b|C b) (-elsif- (c b|C b))* (-else- b)? t'
+unless      '(< c|(c b|C b) t)'
+if          '(< c|((c b|C b) (-elsif- (c b|C b))* (-else- b)? t))'
+
+while       '(< c|(c b|C b) t)'
+until       '(< c|(c b|C b) t)'
+
+for         '(  < w (L|(w,)* w,?)    |   w (L|(w,)* w,?) b  )'
 
 load        '(w (-::- w)*|q)'
 

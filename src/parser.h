@@ -8,11 +8,35 @@ typedef struct dict      dict;
 typedef struct token     token;
 typedef struct statement statement;
 typedef struct block     block;
+typedef struct parser    parser;
 
 typedef uint8_t  (block_mod)(void *meta, block *b);
-typedef uint8_t *(keyword_check)(void *meta, token *t);
+typedef void    *(keyword_check)(parser *p, token *t);
+typedef uint8_t *(keyword_pattern)(parser *p, void *k);
 
-typedef enum { SPACE_C, WORD_C, SYM_C, CONTROL_C, TERM_C } chartype;
+typedef enum { NONE_C = 0, SPACE_C, WORD_C, SYM_C, CONTROL_C, TERM_C } chartype;
+
+struct parser {
+    void *meta;
+    uint8_t *code;
+
+    uint8_t *ptr;
+
+    block_mod *push;
+    block_mod *pop;
+
+    keyword_check   *kcheck;
+    keyword_pattern *kpatt;
+
+    enum {
+        ERROR_NONE = 0,
+        ERROR_MEMORY,
+        ERROR_SYNTAX,
+        ERROR_KEYWORD,
+        ERROR_OTHER
+    } error;
+    uint8_t *error_msg;
+};
 
 struct token {
     size_t   size;
@@ -26,7 +50,8 @@ struct token {
 };
 
 struct statement {
-    token *tokens;
+    size_t     token_count;
+    token     *tokens;
     statement *next;
 };
 
@@ -35,12 +60,14 @@ struct block {
     dict      *symbols;
 };
 
-chartype get_char_type( uint8_t *c );
+chartype get_char_type( uint8_t *c, chartype last );
 uint8_t get_char_length( uint8_t *c );
 
-block *gsd_parse( uint8_t *start, size_t length, void *meta, block_mod push, block_mod pop, keyword_check c );
-statement *gsd_parse_statement( uint8_t **start, size_t *length, void *meta, keyword_check c );
-token *gsd_parse_token( uint8_t **start, size_t *length, void *meta, keyword_check c );
-token *gsd_parse_keyword( uint8_t *k, uint8_t **start, size_t *length, void *meta, keyword_check c, statement *s, token *t );
+block *gsd_parse_code( parser *p, uint8_t *stop );
+statement *gsd_parse_statement( parser *p );
+int gsd_parse_token( token *t, parser *p );
+
+void free_block( block *b );
+void free_statement( statement *a );
 
 #endif

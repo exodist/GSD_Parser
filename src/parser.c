@@ -5,13 +5,20 @@
 #include "parser.h"
 #include "keyword.h"
 
+#define TLEN 20
+
 // TODO: Unicode
-chartype get_char_type( uint8_t *c ) {
+chartype get_char_type( uint8_t *c, chartype last ) {
+    if ( *c == ' '  || *c == '\t' ) return SPACE_C;
+    if ( *c == '\n' || *c == '\r' ) return SPACE_C;
+
+    if ( *c == '_' ) return WORD_C;
     if ( *c >= 'a'  && *c <= 'z'  ) return WORD_C;
     if ( *c >= 'A'  && *c <= 'Z'  ) return WORD_C;
     if ( *c >= '0'  && *c <= '9'  ) return WORD_C;
-    if ( *c == ' '  || *c == '\t' || *c == '\n' || *c == '\r' ) return SPACE_C;
-    if ( *c == ';' ) return TERM_C;
+    if ( *c == '.'  && last == WORD_C ) return WORD_C;
+
+    if ( *c == ';'  || *c == '\0' ) return TERM_C;
     if ( *c  < 32   || *c >= 127  ) return CONTROL_C;
     return SYM_C;
 }
@@ -21,86 +28,108 @@ uint8_t get_char_length( uint8_t *c ) {
     return 1;
 }
 
-block *gsd_parse( uint8_t *start, size_t length, void *meta, block_mod push, block_mod pop, keyword_check c ) {
+block *gsd_parse_code( parser *p, uint8_t *stop ) {
     block *b = malloc(sizeof(block));
     if (!b) return NULL;
     memset(b, 0, sizeof(block));
+    if (stop && !strcmp(p->ptr, stop)) return b;
+    if (p->push) p->push(p->meta, b);
 
-    if (push) push(meta, b);
-    statement *s = gsd_parse_statement( &start, &length, meta, c );
-    while (s) {
-        if (b->statements) {
-            b->statements->next = s;
+    statement *last = NULL;
+    while (1) {
+        statement *s = gsd_parse_statement( p );
+        if (!s) {
+            if (p->pop) p->pop(p->meta, b);
+            free_block( b );
+            return NULL;
         }
-        else {
-            b->statements = s;
+
+        if (!b->statements) b->statements = s;
+        if (last) last->next = s;
+        last = s;
+
+        if (stop && !strcmp(p->ptr, stop)) {
+            (p->ptr) += strlen(stop);
+            break;
         }
-        s = gsd_parse_statement( &start, &length, meta, c );
     }
 
-    if (pop) pop(meta, b);
+    if (p->pop) p->pop(p->meta, b);
     return b;
 }
 
-statement *gsd_parse_statement( uint8_t **c_ptr, size_t *c_rem, void *meta, keyword_check c ) {
+statement *gsd_parse_statement( parser *p ) {
     statement *s = malloc(sizeof(statement));
     if (!s) return NULL;
     memset(s, 0, sizeof(statement));
+    s->token_count = TLEN;
 
-    token *t = gsd_parse_token( c_ptr, c_rem, meta, c );
-    while (t && *(t->ptr) != ';') {
-        uint8_t *k = c( meta, t );
-        if (k) {
-            t = gsd_parse_keyword( k, c_ptr, c_rem, meta, c, s, t );
+    s->tokens = malloc(sizeof(token) * s->token_count);
+    if (!s->tokens) {
+        free(s);
+        return NULL;
+    }
+    memset(s->tokens, 0, sizeof(token) * s->token_count);
+
+    size_t tidx = 0;
+    while (1) {
+        if (tidx >= s->token_count) {
+            s->token_count += TLEN;
+            void *check = realloc(s->tokens, sizeof(token) * s->token_count);
+            if (check = NULL) {
+                free_statement( s );
+                return NULL;
+            }
+            memset(s->tokens + s->token_count - TLEN, 0, sizeof(token) * TLEN);
         }
-        if (s->tokens) {
-            s->tokens->next = t;
+
+        token *t = s->tokens + tidx++;
+        int c = gsd_parse_token( t, p );
+
+        // Handle Errors
+        if (c < 0) {
+            free_statement( s );
+            return NULL;
         }
-        else {
-            s->tokens = t;
-        }
-        token *t = gsd_parse_token( c_ptr, c_rem, meta, c );
+
+        // Handle Statement Terminator
+        if (c == 0) break;
+
+        // Handle keywords
+        void *k = p->kcheck(p, t);
+        if (k) t = gsd_parse_keyword( p, k, s, tidx );
     }
 
     return s;
 }
 
-token *gsd_parse_token( uint8_t **c_ptr, size_t *c_rem, void *meta, keyword_check c ) {
-    token *t = malloc(sizeof(token));
-    if (!t) return NULL;
-    memset(t, 0, sizeof(token));
-
-    if( !*c_rem ) return t;
-    chartype ty = get_char_type( *c_ptr );
-    if (ty == SPACE_C) t->space_prefix = 1;
-    while (ty == SPACE_C || ty == TERM_C) {
-        size_t cl = get_char_length( *c_ptr );
-        if ( *c_rem < cl ) {
-            *c_rem = 0;
-            return t;
+int gsd_parse_token( token *t, parser *p ) {
+    chartype ty = get_char_type( p->ptr, 0 );
+    if (ty == SPACE_C) {
+        t->space_prefix = 1;
+        while (ty == SPACE_C) {
+            (p->ptr) += get_char_length( p->ptr );
+            ty = get_char_type( p->ptr, 0 );
         }
-        (*c_rem) -= cl;
-        (*c_ptr) += cl;
-        if( !*c_rem ) return t;
-        chartype ty = get_char_type( *c_ptr );
     }
 
-    t->ptr = *c_ptr;
-    size_t size  = 0;
-    size_t count = 0;
-    while (ty == get_char_type( *c_ptr )) {
-        size_t cl = get_char_length( *c_ptr );
-        count++;
-        size += cl;
-        (*c_ptr) += cl;
-    }
-    t->size  = size;
-    t->count = count;
+    ty     = get_char_type( p->ptr, 0 );
+    t->ptr = p->ptr;
+    while ( 1 ) {
+        uint8_t len = get_char_length( p->ptr );
+        (t->count)++;
+        (p->ptr)  += len;
+        (t->size) += len;
 
+        chartype n = get_char_type( p->ptr, ty );
+        if (n != ty) break;
+    }
+
+    if ( ty == TERM_C ) return 0;
+
+    ty = get_char_type( p->ptr, 0 );
     if (ty == SPACE_C) t->space_postfix = 1;
-    return t;
+
+    return 1;
 }
 
-token *gsd_parse_keyword( uint8_t *k, uint8_t **c_ptr, size_t *c_rem, void *meta, keyword_check c, statement *s, token *t ) {
-    knode *kn = compile_keyword(k);    
-}
