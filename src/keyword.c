@@ -25,7 +25,6 @@ int gsd_parse_keyword( parser *p, void *keyword, statement *s, size_t *tidx ) {
         free_kparser(kp);
         return -1;
     }
-    free_kparser(kp);
 
     kp_match *matches = gsd_process_keyword(p, n, s);
     if (!matches) {
@@ -220,5 +219,4 @@ int gsd_match_knode(parser *p, knode *n, kp_match *m, statement *st) {
         default:  return 0;
     }
 }
-
 

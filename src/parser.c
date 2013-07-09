@@ -149,19 +149,7 @@ int gsd_parse_quote( parser *p, knode *n, kp_match *m ) {
 int gsd_parse_list( parser *p, knode *n, kp_match *m ) {
 }
 
-int gsd_parse_list( parser *p, knode *n, kp_match *m ) {
-}
-
 int gsd_parse_signature( parser *p, knode *n, kp_match *m ) {
-}
-
-int gsd_parse_signature( parser *p, knode *n, kp_match *m ) {
-}
-
-int gsd_parse_quote( parser *p, knode *n, kp_match *m ) {
-}
-
-int gsd_parse_kcode( parser *p, knode *n, kp_match *m ) {
 }
 
 int gsd_parse_kcode( parser *p, knode *n, kp_match *m ) {

@@ -4,15 +4,16 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-typedef struct block       block;
-typedef struct dict        dict;
-typedef struct knode       knode;
-typedef struct kparser     kparser;
-typedef struct parser      parser;
-typedef struct statement   statement;
-typedef struct token       token;
-typedef struct kp_match    kp_match;
-typedef struct knode_stack knode_stack;
+typedef struct block        block;
+typedef struct dict         dict;
+typedef struct knode        knode;
+typedef struct kparser      kparser;
+typedef struct parser       parser;
+typedef struct statement    statement;
+typedef struct token        token;
+typedef struct kp_match     kp_match;
+typedef struct knode_stack  knode_stack;
+typedef struct pattern_type pattern_type;
 
 typedef uint8_t  (block_mod)(void *meta, block *b);
 typedef void    *(keyword_check)(parser *p, token *t);
@@ -51,7 +52,18 @@ struct knode_stack {
     uint8_t *ptr;
 };
 
+struct pattern_type {
+    enum {
+        PTYPE_KPARSER = 0,
+        PTYPE_KNODE   = 1
+    } type : 32;
+
+    int32_t refcount;
+};
+
 struct kparser {
+    pattern_type type;
+
     uint8_t *pattern;
     uint8_t *ptr;
 
@@ -60,6 +72,8 @@ struct kparser {
 };
 
 struct knode {
+    pattern_type type;
+
     uint8_t want;
     uint8_t mod;
 

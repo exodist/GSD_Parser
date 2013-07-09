@@ -1,11 +1,27 @@
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
+#include <stdio.h>
 #include "keyword_pattern.h"
+#include "GSD_Dict/src/include/gsd_dict.h"
+#include "GSD_Dict/src/include/gsd_dict_return.h"
 
 #define DELIM_SIZE 4
 #define ALT_SIZE   8
 #define SYM_SIZE   16
 #define MATCH_SIZE 32
+
+uint64_t FNV_SEED  = 14695981039346656037UL;
+uint64_t FNV_CONST = 1099511628211;
+
+pthread_once_t PATTERN_CACHE_INIT = PTHREAD_ONCE_INIT;
+dict          *PATTERN_CACHE      = NULL;
+dict_methods   PATTERN_METHODS    = {
+    .cmp    = pattern_compare,
+    .loc    = pattern_loc,
+    .change = NULL,
+    .ref    = pattern_ref,
+};
 
 int gsd_keyword_pattern_valid_atom( uint8_t c ) {
     switch( c ) {
@@ -49,6 +65,7 @@ kparser *gsd_keyword_pattern_normalize(uint8_t *pattern) {
         return ps;
     }
     memset(new, 0, len);
+    ps->type.type = PTYPE_KPARSER;
 
     int D_count = 0;
     size_t ni = 0;
@@ -73,7 +90,21 @@ kparser *gsd_keyword_pattern_normalize(uint8_t *pattern) {
     return ps;
 }
 
+void cache_init() {
+    PATTERN_CACHE = dict_build( 128, PATTERN_METHODS, NULL );
+}
+
 knode *gsd_keyword_pattern_compile(kparser *p) {
+    if (!PATTERN_CACHE) pthread_once(&PATTERN_CACHE_INIT, cache_init);
+
+    if (PATTERN_CACHE) {
+        knode *found = NULL;
+        dict_stat c = dict_get(PATTERN_CACHE, p, (void **)(&found));
+        if (found && !c.num) {
+            return found;
+        }
+    }
+
     knode *start = NULL;
     knode *curr  = NULL;
     while (*(p->ptr) != '\0' && *(p->ptr) != '|' && *(p->ptr) != ')') {
@@ -93,6 +124,7 @@ knode *gsd_keyword_pattern_compile(kparser *p) {
         }
     }
 
+    if (PATTERN_CACHE) dict_set(PATTERN_CACHE, p, start);
     return start;
 }
 
@@ -109,6 +141,7 @@ knode *gsd_keyword_pattern_atom(kparser *p) {
         return NULL;
     }
     memset(n, 0, sizeof(knode));
+    n->type.type = PTYPE_KNODE;
 
     n->want = *(p->ptr);
     p->ptr++;
@@ -316,3 +349,44 @@ void free_kparser(kparser *kp) {
     free(kp);
 }
 
+void free_pattern_cache() {
+    if (!PATTERN_CACHE) return;
+    dict_free(&PATTERN_CACHE);
+    PATTERN_CACHE = NULL;
+}
+
+int pattern_compare(void *m, void *kp1, void *kp2) {
+    kparser *a = kp1;
+    kparser *b = kp2;
+    return strcmp( a->pattern, b->pattern );
+}
+
+size_t pattern_loc(size_t sc, void *m, void *kpp) {
+    kparser *kp = kpp;
+    uint64_t hash = hash_pattern(kp->pattern);
+    return hash % sc;
+}
+
+void pattern_ref(dict *d, void *ref, int delta) {
+    pattern_type *t = ref;
+
+    t->refcount += delta;
+    if (t->refcount > 0) return;
+
+    if (t->type == PTYPE_KPARSER) return free_kparser(ref);
+    if (t->type == PTYPE_KNODE)   return free_knode(ref);
+}
+
+uint64_t hash_pattern( uint8_t *p ) {
+    size_t length = strlen(p);
+
+    if ( length < 1 ) return FNV_SEED;
+
+    uint64_t key = FNV_SEED;
+    for ( uint64_t i = 0; i < length; i++ ) {
+        key ^= p[i];
+        key *= FNV_CONST;
+    }
+
+    return key;
+}

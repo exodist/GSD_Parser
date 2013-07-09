@@ -19,4 +19,10 @@ int gsd_keyword_pattern_alt(kparser *p, knode *n);
 void free_knode(knode *n);
 void free_kparser(kparser *kp);
 
+void free_pattern_cache();
+int pattern_compare(void *m, void *p1, void *p2);
+size_t pattern_loc(size_t sc, void *m, void *p);
+void pattern_ref(dict *d, void *ref, int delta);
+uint64_t hash_pattern( uint8_t *p );
+
 #endif
