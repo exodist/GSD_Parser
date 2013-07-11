@@ -45,7 +45,7 @@ int gsd_keyword_pattern_valid_mod( uint8_t a, uint8_t m ) {
 
     // These atoms cannot have modifiers
     switch ( a ) {
-        case 'l': case 'c': case 's': case 'D': case '^': case '$': case '<':
+        case 'l': case 'c': case 's': case 'D': case '^': case '$':
         case '>': case '/': case 't':
             return 0;
     }
@@ -95,13 +95,17 @@ void cache_init() {
 }
 
 knode *gsd_keyword_pattern_compile(kparser *p) {
-    if (!PATTERN_CACHE) pthread_once(&PATTERN_CACHE_INIT, cache_init);
+    int store = 0;
+    if ( p->ptr == p->pattern) {
+        if (!PATTERN_CACHE) pthread_once(&PATTERN_CACHE_INIT, cache_init);
 
-    if (PATTERN_CACHE) {
-        knode *found = NULL;
-        dict_stat c = dict_get(PATTERN_CACHE, p, (void **)(&found));
-        if (found && !c.num) {
-            return found;
+        if (PATTERN_CACHE) {
+            store = 1;
+            knode *found = NULL;
+            dict_stat c = dict_get(PATTERN_CACHE, p, (void **)(&found));
+            if (found && !c.num) {
+                return found;
+            }
         }
     }
 
@@ -124,7 +128,9 @@ knode *gsd_keyword_pattern_compile(kparser *p) {
         }
     }
 
-    if (PATTERN_CACHE) dict_set(PATTERN_CACHE, p, start);
+    if (store) {
+        if (PATTERN_CACHE) dict_set(PATTERN_CACHE, p, start);
+    }
     return start;
 }
 
@@ -318,7 +324,7 @@ int gsd_keyword_pattern_alt(kparser *p, knode *n) {
 }
 
 void free_knode(knode *n) {
-    if( n->want == '(' ) {
+    if( n->want == '(' && n->data.alt ) {
         size_t i = 0;
         while ( n->data.alt[i] != NULL ) {
             free_knode(n->data.alt[i++]);

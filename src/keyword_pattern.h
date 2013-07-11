@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include "structures.h"
 
-int gsd_keyword_pattern_valid_atom( uint8_t c );
-int gsd_keyword_pattern_valid_mod( uint8_t a, uint8_t m );
+int gsd_keyword_pattern_valid_atom(uint8_t c);
+int gsd_keyword_pattern_valid_mod(uint8_t a, uint8_t m);
 
 kparser *gsd_keyword_pattern_normalize(uint8_t *pattern);
 knode   *gsd_keyword_pattern_compile(kparser *p);

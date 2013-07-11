@@ -17,8 +17,8 @@ n  - number, alphanumeric starting with number
 _  - whitespace
 
 Positioning
-<  - grab items before keyword in this statement
->  - look ahead at next token
+<  - grab item before keyword in this statement
+>  - grab item before keyword if it is not followed by a space
 /  - NoWhitespace
 
 Extra Behavior
@@ -39,10 +39,10 @@ Constructs
 '           '"'
 `           '"'
 
-++          '(C|/w|<|w)'    If not followed by a space grab the next token,
---          '(C|/w|<|w)'    otherwise bind left, if nothing left bind right
+++          '(/C|/w|>)'    Grab paren item after if no space, next token if no
+--          '(/C|/w|>)'    space, otherwise previous item if no space.
 
-::          '<
+::          '>w (-::- w)*'
 
 {           "c -}-"
 [           "l -]-"
@@ -77,8 +77,9 @@ fennec      '(l|q) L? b t'
 var         '( (w (w (n|q|L)-,-)* (n|q|L)-,-?) -;- | ((w l)|(w w)|l|w) (-;-|-=-) )'
 #######
 
-sigil       '/w'
+sigil       '/(w | -{- (w|q) -}- )'
 
+q           'DD'
 qq          'DD'
 s           'DDD'
 
@@ -90,32 +91,16 @@ s           'DDD'
 
 //          '.'
 
-unless      '(< c|(c b|C b) t)'
-if          '(< c|((c b|C b) (-elsif- (c b|C b))* (-else- b)? t))'
+unless      '(<+ c|(c b|C b) t)'
+if          '(<+ c|((c b|C b) (-elsif- (c b|C b))* (-else- b)? t))'
 
-while       '(< c|(c b|C b) t)'
-until       '(< c|(c b|C b) t)'
+while       '(<+ c|(c b|C b) t)'
+until       '(<+ c|(c b|C b) t)'
 
-for         '(  < w (L|(w,)* w,?)    |   w (L|(w,)* w,?) b  )'
+for         '(  <+ w (L|(w,)* w,?)    |   w (L|(w,)* w,?) b  )'
 
 load        '(w (-::- w)*|q)'
 
 try         'b (-catch- C b)? (-finally- b)? t'
 
 keyword     'w q b'
-
-
------------------------------------
-
-{
-    look: '<' or '>'
-    want: 'char'
-    modi: 'char'
-    syms: [...]
-    altr: ...
-    next: ...
-
-    look_idx: # token number from keyword, 1 is just before keyword, 2 is 2
-                before keyword, etc. If 0 then grab entire statement before
-                Not used for >
-}
