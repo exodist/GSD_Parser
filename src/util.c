@@ -58,15 +58,15 @@ void dump_knode( knode *n, uint8_t indent, uint8_t alt ) {
 }
 
 void dump_token(token *t, int indent) {
-    for (int i = 0; i < indent; i++) printf( " " );
-    printf( t->space_prefix  ? "+" : "-" );
-    printf( t->space_postfix ? "+" : "-" );
-    printf( " " );
-
     if ( t->block ) {
         dump_block( t->block, indent );
     }
     else {
+        for (int i = 0; i < indent; i++) printf( " " );
+        printf( t->space_prefix  ? "+" : "-" );
+        printf( t->space_postfix ? "+" : "-" );
+        printf( " " );
+
         if (t->is_string) printf( "\"" );
         for( size_t i = 0; i < t->count; i++ ) {
             printf( "%c", t->ptr[i] );
