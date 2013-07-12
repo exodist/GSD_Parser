@@ -2,8 +2,12 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <assert.h>
 #include "parser.h"
 #include "keyword.h"
+#include "structures.h"
+#include "GSD_Dict/src/include/gsd_dict.h"
+#include "GSD_Dict/src/include/gsd_dict_return.h"
 
 #define TLEN 20
 
@@ -17,9 +21,11 @@ chartype get_char_type( uint8_t *c, chartype last ) {
     if ( *c >= 'A'  && *c <= 'Z'  ) return WORD_C;
     if ( *c >= '0'  && *c <= '9'  ) return WORD_C;
     if ( *c == '.'  && last == WORD_C ) return WORD_C;
+    if ( *c == '-'  && last == WORD_C ) return WORD_C;
+    if ( *c == '+'  && last == WORD_C ) return WORD_C;
 
     if ( *c == ';'  || *c == '\0' ) return TERM_C;
-    if ( *c  < 32   || *c >= 127  ) return CONTROL_C;
+    assert(!( *c  < 32   || *c >= 127  ));
     return SYM_C;
 }
 
@@ -48,6 +54,9 @@ block *gsd_parse_code( parser *p, uint8_t *stop ) {
         if (last) last->next = s;
         last = s;
 
+        while (get_char_type(p->ptr, 0) == SPACE_C)
+            p->ptr += get_char_length(p->ptr);
+
         if (stop && !strcmp(p->ptr, stop)) {
             (p->ptr) += strlen(stop);
             break;
@@ -59,6 +68,7 @@ block *gsd_parse_code( parser *p, uint8_t *stop ) {
 }
 
 statement *gsd_parse_statement( parser *p ) {
+    printf( "=====\n%s\n=====\n", p->ptr );
     statement *s = malloc(sizeof(statement));
     if (!s) return NULL;
     memset(s, 0, sizeof(statement));
@@ -129,7 +139,7 @@ int gsd_parse_token( token *t, parser *p ) {
         (t->size) += len;
 
         chartype n = get_char_type( p->ptr, ty );
-        if (n != ty) break;
+        if (n != ty || ty == TERM_C) break;
     }
 
     if ( ty == TERM_C ) return 0;
@@ -138,6 +148,22 @@ int gsd_parse_token( token *t, parser *p ) {
     if (ty == SPACE_C) t->space_postfix = 1;
 
     return 1;
+}
+
+void free_statement( statement *s ) {
+    if (s->tokens) free( s->tokens );
+    if (s->next) free_statement(s->next);
+    free(s);
+}
+
+void free_block( block *b ) {
+    if (b->statements)
+        free_statement( b->statements );
+
+    if (b->symbols)
+        dict_free(&(b->symbols));
+
+    free(b);
 }
 
 int gsd_parse_block( parser *p, knode *n, kp_match *m ) {
@@ -173,7 +199,7 @@ int gsd_parse_space( parser *p, knode *n, kp_match *m ) {
 int gsd_parse_behind( parser *p, knode *n, kp_match *m, statement *st ) {
 }
 
-int gsd_parse_ahead( parser *p, knode *n, kp_match *m ) {
+int gsd_parse_behindns( parser *p, knode *n, kp_match *m, statement *st ) {
 }
 
 int gsd_parse_nospace( parser *p, knode *n, kp_match *m ) {

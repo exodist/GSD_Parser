@@ -4,11 +4,6 @@
 #include "../keyword_pattern.h"
 #include "../util.h"
 
-
-//kparser *gsd_keyword_pattern_normalize(uint8_t *pattern);
-//knode   *gsd_keyword_pattern_compile(kparser *p);
-//void dump_knode( knode *n, uint8_t indent, uint8_t alt );
-
 int main() {
     kparser *p = gsd_keyword_pattern_normalize(
         "( b{foo,bar,baz} (w (w (n|q|L)-,-)* (n|q|L)-,-?) -;- | ((w l)|(w w)|l|w) (-;-|-=-) )"

@@ -18,11 +18,8 @@ void free_statement( statement *a );
 int gsd_parse_block(     parser *p, knode *n, kp_match *m                );
 int gsd_parse_quote(     parser *p, knode *n, kp_match *m                );
 int gsd_parse_list(      parser *p, knode *n, kp_match *m                );
-int gsd_parse_list(      parser *p, knode *n, kp_match *m                );
-int gsd_parse_signature( parser *p, knode *n, kp_match *m                );
 int gsd_parse_signature( parser *p, knode *n, kp_match *m                );
 int gsd_parse_quote(     parser *p, knode *n, kp_match *m                );
-int gsd_parse_kcode(     parser *p, knode *n, kp_match *m                );
 int gsd_parse_kcode(     parser *p, knode *n, kp_match *m                );
 int gsd_parse_slurp(     parser *p, knode *n, kp_match *m                );
 int gsd_parse_delimited( parser *p, knode *n, kp_match *m                );
@@ -30,7 +27,7 @@ int gsd_parse_word(      parser *p, knode *n, kp_match *m                );
 int gsd_parse_number(    parser *p, knode *n, kp_match *m                );
 int gsd_parse_space(     parser *p, knode *n, kp_match *m                );
 int gsd_parse_behind(    parser *p, knode *n, kp_match *m, statement *st );
-int gsd_parse_ahead(     parser *p, knode *n, kp_match *m                );
+int gsd_parse_behindns(  parser *p, knode *n, kp_match *m, statement *st );
 int gsd_parse_nospace(   parser *p, knode *n, kp_match *m                );
 
 #endif

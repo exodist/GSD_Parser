@@ -171,6 +171,11 @@ void free_knode_stack(knode_stack *s) {
     while (s != NULL) pop_knode_stack(&s);
 }
 
+void rollback_knode_stack(knode_stack **s) {
+    pop_knode_stack(s);
+    while ((*s)->node->want != '(') pop_knode_stack(s);
+}
+
 const char *gsd_keyword_error(knode *n) {
     switch(n->want) {
         case 'b': return "Expected block";
@@ -190,7 +195,7 @@ const char *gsd_keyword_error(knode *n) {
         case '^': return "Expected new line";
         case '$': return "Expected end of line";
         case '<': return "Expected preceeding tokens";
-        case '>': return "Expected another token";
+        case '>': return "Expected preceeding token";
         case '/': return "Unexpected whitespace";
         case '(': return "Unexpected token";
         default:  return "Unknown Error";
@@ -214,7 +219,7 @@ int gsd_match_knode(parser *p, knode *n, kp_match *m, statement *st) {
         case 'n': return gsd_parse_number(p, n, m);
         case '_': return gsd_parse_space(p, n, m);
         case '<': return gsd_parse_behind(p, n, m, st);
-        case '>': return gsd_parse_ahead(p, n, m);
+        case '>': return gsd_parse_behindns(p, n, m, st);
         case '/': return gsd_parse_nospace(p, n, m);
         default:  return 0;
     }

@@ -57,3 +57,43 @@ void dump_knode( knode *n, uint8_t indent, uint8_t alt ) {
     }
 }
 
+void dump_token(token *t, int indent) {
+    for (int i = 0; i < indent; i++) printf( " " );
+    printf( t->space_prefix  ? "+" : "-" );
+    printf( t->space_postfix ? "+" : "-" );
+    printf( " " );
+
+    if ( t->block ) {
+        dump_block( t->block, indent );
+    }
+    else {
+        if (t->is_string) printf( "\"" );
+        for( size_t i = 0; i < t->count; i++ ) {
+            printf( "%c", t->ptr[i] );
+        }
+        if (t->is_string) printf( "\"" );
+    }
+
+    printf( "\n" );
+}
+
+void dump_statement(statement *s, int indent) {
+    token *t = s->tokens;
+    for (int i = 0; i < indent; i++) printf( " " );
+    printf( "[\n" );
+    while( t->size ) dump_token(t++, indent + 2);
+    for (int i = 0; i < indent; i++) printf( " " );
+    printf( "]\n" );
+}
+
+void dump_block( block *b, int indent ) {
+    for (int i = 0; i < indent; i++) printf( " " );
+    printf( "{\n" );
+    statement *s = b->statements;
+    while (s != NULL) {
+        dump_statement(s, indent + 2);
+        s = s->next;
+    }
+    for (int i = 0; i < indent; i++) printf( " " );
+    printf( "}\n" );
+}

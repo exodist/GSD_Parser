@@ -15,7 +15,7 @@ typedef struct kp_match     kp_match;
 typedef struct knode_stack  knode_stack;
 typedef struct pattern_type pattern_type;
 
-typedef uint8_t  (block_mod)(void *meta, block *b);
+typedef void     (block_mod)(void *meta, block *b);
 typedef void    *(keyword_check)(parser *p, token *t);
 typedef uint8_t *(keyword_pattern)(parser *p, void *k);
 typedef uint8_t *(keyword_run)(parser *p, void *k, statement *s, size_t *tidx, kp_match *matches);
@@ -108,10 +108,10 @@ struct token {
     size_t   size;
     size_t   count;
     uint8_t *ptr;
-    enum { BLOCK_T, LITERAL_T, SYMBOL_T, OPERATOR_T, RUNBLOCK_T } type;
-
-    uint8_t space_prefix;
-    uint8_t space_postfix;
+    block   *block;
+    uint8_t  space_prefix;
+    uint8_t  space_postfix;
+    uint8_t  is_string;
 };
 
 struct statement {
