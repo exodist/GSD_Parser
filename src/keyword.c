@@ -4,7 +4,7 @@
 #include "keyword.h"
 #include "parser.h"
 
-int gsd_parse_keyword( parser *p, void *keyword, statement *s, size_t *tidx ) {
+int gsd_parse_keyword( parser *p, void *keyword, statement *s ) {
     uint8_t *patt = p->kpatt(p, keyword);
     if (!patt) {
         p->error = ERROR_KEYWORD;
@@ -34,13 +34,13 @@ int gsd_parse_keyword( parser *p, void *keyword, statement *s, size_t *tidx ) {
         p->error_msg = "Syntax Error";
         return -1;
     }
-    p->krun(p, keyword, s, tidx, matches);
+    p->krun(p, keyword, s, matches);
 
     // See if we need to terminate the statement
     int out = 0;
     size_t midx = 0;
     while (matches[midx + 1].node) midx++;
-    if ( matches[midx].node->want == 't' ) out = 1;
+    //if ( matches[midx].node->want == 't' ) out = 1;
 
     free(matches);
     free_knode(n);
@@ -211,8 +211,8 @@ int gsd_match_knode(parser *p, knode *n, kp_match *m, statement *st) {
         case 's': return gsd_parse_signature(p, n, m);
         case 'S': return gsd_parse_signature(p, n, m);
         case 'q': return gsd_parse_quote(p, n, m);
-        case 'c': return gsd_parse_kcode(p, n, m);
-        case 'C': return gsd_parse_kcode(p, n, m);
+        case 'c': return gsd_parse_kcode(p, n, m, st);
+        case 'C': return gsd_parse_kcode(p, n, m, st);
         case '.': return gsd_parse_slurp(p, n, m);
         case 'D': return gsd_parse_delimited(p, n, m);
         case 'w': return gsd_parse_word(p, n, m);

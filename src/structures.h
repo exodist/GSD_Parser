@@ -18,7 +18,7 @@ typedef struct pattern_type pattern_type;
 typedef void     (block_mod)(void *meta, block *b);
 typedef void    *(keyword_check)(parser *p, token *t);
 typedef uint8_t *(keyword_pattern)(parser *p, void *k);
-typedef uint8_t *(keyword_run)(parser *p, void *k, statement *s, size_t *tidx, kp_match *matches);
+typedef void     (keyword_run)(parser *p, void *k, statement *s, kp_match *matches);
 
 typedef enum {
     NONE_C = 0,
@@ -116,6 +116,7 @@ struct token {
 
 struct statement {
     size_t     token_count;
+    size_t     token_idx;
     token     *tokens;
     statement *next;
 };

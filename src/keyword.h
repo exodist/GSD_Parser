@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include "structures.h"
 
-int gsd_parse_keyword( parser *p, void *keyword, statement *s, size_t *tidx );
+int gsd_parse_keyword( parser *p, void *keyword, statement *s );
 kp_match *gsd_process_keyword(parser *p, knode *n, statement *st);
 
 knode_stack *push_knode_stack(knode_stack **s, knode *n, parser *p);

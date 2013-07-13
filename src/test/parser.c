@@ -4,15 +4,60 @@
 #include "../parser.h"
 #include "../util.h"
 
-void     bm(void *m, block *b) {}
-void    *kc(parser *p, token *t) { return NULL; }
-uint8_t *kp(parser *p, void *k)  { return NULL; }
+void bm(void *m, block *b) {}
 
-uint8_t *kr(parser *p, void *k, statement *s, size_t *i, kp_match *m) {
+void *kc(parser *p, token *t) {
+    if (*(t->ptr) == '{') return (void *)1;
     return NULL;
 }
 
+uint8_t *kp(parser *p, void *k) { return "c"; }
+
+void kr(parser *p, void *k, statement *s, kp_match *m) {
+}
+
+void simple();
+void keyword_block();
+
 int main() {
+    assert(stop_match( "};\n", "}" ));
+    assert(stop_match( "", "" ));
+    assert(stop_match( "---; xy", "-" ));
+    assert(!stop_match( "foo", "o" ));
+    assert(!stop_match( "foo", "" ));
+
+    //simple();
+    keyword_block();
+
+    return 0;
+}
+
+void keyword_block() {
+    parser p = {
+        .meta = NULL,
+        .ptr  = NULL,
+        .code = "foo bar baz;\n"
+                "{ x y; z };\n"
+                "foo bar baz;\n",
+
+        .push = bm,
+        .pop  = bm,
+
+        .kcheck = kc,
+        .kpatt  = kp,
+        .krun   = kr,
+
+        .error = 0,
+        .error_msg = NULL,
+    };
+    p.ptr = p.code;
+
+    block *b = gsd_parse_code(&p, "\0");
+    dump_block(b, 0);
+   
+}
+
+void simple() {
     parser p = {
         .meta = NULL,
         .ptr  = NULL,
@@ -37,8 +82,6 @@ int main() {
 
     block *b = gsd_parse_code(&p, "\0");
     dump_block(b, 0);
-
-    return 0;
 }
 
 

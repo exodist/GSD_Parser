@@ -34,6 +34,17 @@ uint8_t get_char_length( uint8_t *c ) {
     return 1;
 }
 
+int stop_match( uint8_t *ptr, uint8_t *stop ) {
+    if (ptr[0] == '\0' && stop[0] == '\0') return 1;
+    if (ptr[0] == '\0' || stop[0] == '\0') return 0;
+
+    for( size_t i = 0; ptr[i] != '\0' && stop[i] != '\0'; i++ ) {
+        if (ptr[i] != stop[i]) return 0;
+    }
+
+    return 1;
+}
+
 block *gsd_parse_code( parser *p, uint8_t *stop ) {
     block *b = malloc(sizeof(block));
     if (!b) return NULL;
@@ -43,7 +54,7 @@ block *gsd_parse_code( parser *p, uint8_t *stop ) {
 
     statement *last = NULL;
     while (1) {
-        statement *s = gsd_parse_statement( p );
+        statement *s = gsd_parse_statement( p, stop );
         if (!s) {
             if (p->pop) p->pop(p->meta, b);
             free_block( b );
@@ -57,7 +68,7 @@ block *gsd_parse_code( parser *p, uint8_t *stop ) {
         while (get_char_type(p->ptr, 0) == SPACE_C)
             p->ptr += get_char_length(p->ptr);
 
-        if (stop && !strcmp(p->ptr, stop)) {
+        if (stop && stop_match(p->ptr, stop)) {
             (p->ptr) += strlen(stop);
             break;
         }
@@ -67,8 +78,7 @@ block *gsd_parse_code( parser *p, uint8_t *stop ) {
     return b;
 }
 
-statement *gsd_parse_statement( parser *p ) {
-    printf( "=====\n%s\n=====\n", p->ptr );
+statement *gsd_parse_statement( parser *p, uint8_t *stop ) {
     statement *s = malloc(sizeof(statement));
     if (!s) return NULL;
     memset(s, 0, sizeof(statement));
@@ -81,9 +91,8 @@ statement *gsd_parse_statement( parser *p ) {
     }
     memset(s->tokens, 0, sizeof(token) * s->token_count);
 
-    size_t tidx = 0;
     while (1) {
-        if (tidx >= s->token_count) {
+        if (s->token_idx >= s->token_count) {
             s->token_count += TLEN;
             void *check = realloc(s->tokens, sizeof(token) * s->token_count);
             if (check = NULL) {
@@ -93,8 +102,8 @@ statement *gsd_parse_statement( parser *p ) {
             memset(s->tokens + s->token_count - TLEN, 0, sizeof(token) * TLEN);
         }
 
-        token *t = s->tokens + tidx++;
-        int c = gsd_parse_token( t, p );
+        token *t = s->tokens + s->token_idx++;
+        int c = gsd_parse_token( t, p, stop );
 
         // Handle Errors
         if (c < 0) {
@@ -108,7 +117,7 @@ statement *gsd_parse_statement( parser *p ) {
         // Handle keywords
         void *k = p->kcheck(p, t);
         if (k) {
-            int term = gsd_parse_keyword( p, k, s, &tidx );
+            int term = gsd_parse_keyword( p, k, s );
             if (term > 0) break;
             if (term < 0) {
                 free_statement( s );
@@ -120,7 +129,7 @@ statement *gsd_parse_statement( parser *p ) {
     return s;
 }
 
-int gsd_parse_token( token *t, parser *p ) {
+int gsd_parse_token( token *t, parser *p, uint8_t *stop ) {
     chartype ty = get_char_type( p->ptr, 0 );
     if (ty == SPACE_C) {
         t->space_prefix = 1;
@@ -133,6 +142,8 @@ int gsd_parse_token( token *t, parser *p ) {
     ty     = get_char_type( p->ptr, 0 );
     t->ptr = p->ptr;
     while ( 1 ) {
+        if ( stop && stop_match(p->ptr, stop) ) return 0;
+
         uint8_t len = get_char_length( p->ptr );
         (t->count)++;
         (p->ptr)  += len;
@@ -178,7 +189,13 @@ int gsd_parse_list( parser *p, knode *n, kp_match *m ) {
 int gsd_parse_signature( parser *p, knode *n, kp_match *m ) {
 }
 
-int gsd_parse_kcode( parser *p, knode *n, kp_match *m ) {
+int gsd_parse_kcode( parser *p, knode *n, kp_match *m, statement *st ) {
+    block *b = gsd_parse_code( p, "}" );
+    if (!b) return 0;
+
+    st->tokens[st->token_idx - 1].block = b;
+
+    return 1;
 }
 
 int gsd_parse_slurp( parser *p, knode *n, kp_match *m ) {

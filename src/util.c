@@ -72,9 +72,8 @@ void dump_token(token *t, int indent) {
             printf( "%c", t->ptr[i] );
         }
         if (t->is_string) printf( "\"" );
+        printf( "\n" );
     }
-
-    printf( "\n" );
 }
 
 void dump_statement(statement *s, int indent) {
