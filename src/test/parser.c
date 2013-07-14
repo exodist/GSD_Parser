@@ -1,19 +1,32 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <string.h>
 #include "../parser.h"
 #include "../util.h"
 
 void bm(void *m, block *b) {}
 
 void *kc(parser *p, token *t) {
-    if (*(t->ptr) == '{') return (void *)1;
+    if (*(t->ptr) == 'L') return (void *)1;
     return NULL;
 }
 
-uint8_t *kp(parser *p, void *k) { return "c"; }
+uint8_t *kp(parser *p, void *k) { return "b"; }
 
 void kr(parser *p, void *k, statement *s, kp_match *m) {
+    while (m->node) {
+        if (m->node->want == 'b' || m->node->want == 'c') {
+            dump_block( m->match.blk, 2 );
+        }
+        else {
+            printf( "Matched text" );
+        }
+        m++;
+    }
+
+    s->token_idx--;
+    memset( s->tokens + s->token_idx, 0, sizeof(token) );
 }
 
 void simple();
@@ -37,7 +50,7 @@ void keyword_block() {
         .meta = NULL,
         .ptr  = NULL,
         .code = "foo bar baz;\n"
-                "{ x y; z };\n"
+                "L{ x y; z };\n"
                 "foo bar baz;\n",
 
         .push = bm,

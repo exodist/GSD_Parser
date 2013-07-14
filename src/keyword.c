@@ -96,7 +96,10 @@ kp_match *gsd_process_keyword(parser *p, knode *n, statement *st) {
             match = gsd_match_knode(p, s->node, matches + idx, st);
         }
 
-        if (match) idx++;
+        if (match) {
+            matches[idx].node = s->node;
+            idx++;
+        }
         char mod = s->node->mod;
 
         // Multiple Occurence, loop again
@@ -115,8 +118,19 @@ kp_match *gsd_process_keyword(parser *p, knode *n, statement *st) {
                 p->error = ERROR_SYNTAX;
                 p->error_msg = gsd_keyword_error(s->node);
             }
+
+            // Rollback
             rollback = 1;
-            rollback_knode_stack(&s);
+            pop_knode_stack(&s);
+            while (s && s->node->want != '(') {
+                pop_knode_stack(&s);
+            }
+            if (s) {
+                idx    = s->idx;
+                p->ptr = s->ptr;
+                memset( matches + idx, 0, length - idx );
+            }
+
             continue;
         }
 
@@ -171,11 +185,6 @@ void free_knode_stack(knode_stack *s) {
     while (s != NULL) pop_knode_stack(&s);
 }
 
-void rollback_knode_stack(knode_stack **s) {
-    pop_knode_stack(s);
-    while ((*s)->node->want != '(') pop_knode_stack(s);
-}
-
 const char *gsd_keyword_error(knode *n) {
     switch(n->want) {
         case 'b': return "Expected block";
@@ -204,23 +213,23 @@ const char *gsd_keyword_error(knode *n) {
 
 int gsd_match_knode(parser *p, knode *n, kp_match *m, statement *st) {
     switch(n->want) {
-        case 'b': return gsd_parse_block(p, n, m);
-        case '"': return gsd_parse_quote(p, n, m);
-        case 'l': return gsd_parse_list(p, n, m);
-        case 'L': return gsd_parse_list(p, n, m);
-        case 's': return gsd_parse_signature(p, n, m);
-        case 'S': return gsd_parse_signature(p, n, m);
-        case 'q': return gsd_parse_quote(p, n, m);
+        case 'b': return gsd_parse_block(p, n, m, st);
+        case '"': return gsd_parse_quote(p, n, m, st);
+        case 'l': return gsd_parse_list(p, n, m, st);
+        case 'L': return gsd_parse_list(p, n, m, st);
+        case 's': return gsd_parse_signature(p, n, m, st);
+        case 'S': return gsd_parse_signature(p, n, m, st);
+        case 'q': return gsd_parse_quote(p, n, m, st);
         case 'c': return gsd_parse_kcode(p, n, m, st);
         case 'C': return gsd_parse_kcode(p, n, m, st);
-        case '.': return gsd_parse_slurp(p, n, m);
-        case 'D': return gsd_parse_delimited(p, n, m);
-        case 'w': return gsd_parse_word(p, n, m);
-        case 'n': return gsd_parse_number(p, n, m);
-        case '_': return gsd_parse_space(p, n, m);
+        case '.': return gsd_parse_slurp(p, n, m, st);
+        case 'D': return gsd_parse_delimited(p, n, m, st);
+        case 'w': return gsd_parse_word(p, n, m, st);
+        case 'n': return gsd_parse_number(p, n, m, st);
+        case '_': return gsd_parse_space(p, n, m, st);
         case '<': return gsd_parse_behind(p, n, m, st);
         case '>': return gsd_parse_behindns(p, n, m, st);
-        case '/': return gsd_parse_nospace(p, n, m);
+        case '/': return gsd_parse_nospace(p, n, m, st);
         default:  return 0;
     }
 }

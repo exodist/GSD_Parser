@@ -34,6 +34,28 @@ uint8_t get_char_length( uint8_t *c ) {
     return 1;
 }
 
+// TODO: Unicode
+uint8_t *get_char_pair( uint8_t *c, size_t len ) {
+    uint8_t *buff = malloc(len + 1);
+    if (!buff) return NULL;
+    memset( buff, 0, len + 1 );
+
+    if ( len == 1 ) {
+        switch (*c) {
+            case '{': sprintf( buff, "}" ); return buff;
+            case '(': sprintf( buff, ")" ); return buff;
+            case '<': sprintf( buff, ">" ); return buff;
+            case '[': sprintf( buff, "]" ); return buff;
+        }
+    }
+
+    for (size_t i = 0; i < len && c[i] != '\0'; i++) {
+        buff[i] = c[i];
+    }
+
+    return buff;
+}
+
 int stop_match( uint8_t *ptr, uint8_t *stop ) {
     if (ptr[0] == '\0' && stop[0] == '\0') return 1;
     if (ptr[0] == '\0' || stop[0] == '\0') return 0;
@@ -177,40 +199,59 @@ void free_block( block *b ) {
     free(b);
 }
 
-int gsd_parse_block( parser *p, knode *n, kp_match *m ) {
-}
+int gsd_parse_block( parser *p, knode *n, kp_match *m, statement *st ) {
+    // Skip whitespace and newlines
+    chartype ty = get_char_type( p->ptr, NONE_C );
+    while (ty == SPACE_C) {
+        p->ptr += get_char_length( p->ptr );
+        ty = get_char_type( p->ptr, NONE_C );
+    }
+    // check for '{'
+    if (p->ptr[0] != '{') return 0;
+    p->ptr++;
 
-int gsd_parse_quote( parser *p, knode *n, kp_match *m ) {
-}
-
-int gsd_parse_list( parser *p, knode *n, kp_match *m ) {
-}
-
-int gsd_parse_signature( parser *p, knode *n, kp_match *m ) {
-}
-
-int gsd_parse_kcode( parser *p, knode *n, kp_match *m, statement *st ) {
     block *b = gsd_parse_code( p, "}" );
     if (!b) return 0;
 
-    st->tokens[st->token_idx - 1].block = b;
+    m->match.blk = b;
 
     return 1;
 }
 
-int gsd_parse_slurp( parser *p, knode *n, kp_match *m ) {
+int gsd_parse_quote( parser *p, knode *n, kp_match *m, statement *st ) {
 }
 
-int gsd_parse_delimited( parser *p, knode *n, kp_match *m ) {
+int gsd_parse_list( parser *p, knode *n, kp_match *m, statement *st ) {
 }
 
-int gsd_parse_word( parser *p, knode *n, kp_match *m ) {
+int gsd_parse_signature( parser *p, knode *n, kp_match *m, statement *st ) {
 }
 
-int gsd_parse_number( parser *p, knode *n, kp_match *m ) {
+int gsd_parse_kcode( parser *p, knode *n, kp_match *m, statement *st ) {
+    token *t = st->tokens + st->token_idx - 1;
+    uint8_t *stop = get_char_pair( t->ptr, t->size );
+    block *b = gsd_parse_code( p, stop );
+    free(stop);
+    if (!b) return 0;
+
+    t->block = b;
+
+    return 1;
 }
 
-int gsd_parse_space( parser *p, knode *n, kp_match *m ) {
+int gsd_parse_slurp( parser *p, knode *n, kp_match *m, statement *st ) {
+}
+
+int gsd_parse_delimited( parser *p, knode *n, kp_match *m, statement *st ) {
+}
+
+int gsd_parse_word( parser *p, knode *n, kp_match *m, statement *st ) {
+}
+
+int gsd_parse_number( parser *p, knode *n, kp_match *m, statement *st ) {
+}
+
+int gsd_parse_space( parser *p, knode *n, kp_match *m, statement *st ) {
 }
 
 int gsd_parse_behind( parser *p, knode *n, kp_match *m, statement *st ) {
@@ -219,6 +260,6 @@ int gsd_parse_behind( parser *p, knode *n, kp_match *m, statement *st ) {
 int gsd_parse_behindns( parser *p, knode *n, kp_match *m, statement *st ) {
 }
 
-int gsd_parse_nospace( parser *p, knode *n, kp_match *m ) {
+int gsd_parse_nospace( parser *p, knode *n, kp_match *m, statement *st ) {
 }
 

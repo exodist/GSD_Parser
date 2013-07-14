@@ -40,7 +40,10 @@ typedef enum {
 struct kp_match {
     knode   *node;
     size_t   match_size;
-    uint8_t *match;
+    union {
+        uint8_t *str;
+        block   *blk;
+    } match;
 };
 
 struct knode_stack {
