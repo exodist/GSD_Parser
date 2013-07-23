@@ -199,6 +199,28 @@ void free_block( block *b ) {
     free(b);
 }
 
+uint8_t *gsd_parse_slurp_until( parser *p, uint8_t *stop, int escapable ) {
+    uint8_t *start = p->ptr;
+    uint8_t last = '\0';
+    size_t size = 0;
+    while ( (escapable && last == '\\') || !stop_match( p->ptr, stop )) {
+        size++;
+        last = p->ptr[0];
+        p->ptr++;
+    }
+    p->ptr += strlen(stop);
+
+    uint8_t *out = malloc( size + 1 );
+    size_t i = 0;
+    size_t j = 0;
+    while ( j < size ) {
+        if ( start[j] == '\\' ) j++;
+        out[i++] = start[j++];
+    }
+    out[i] = '\0';
+    return out;
+}
+
 int gsd_parse_block( parser *p, knode *n, kp_match *m, statement *st ) {
     // Skip whitespace and newlines
     chartype ty = get_char_type( p->ptr, NONE_C );
@@ -219,6 +241,20 @@ int gsd_parse_block( parser *p, knode *n, kp_match *m, statement *st ) {
 }
 
 int gsd_parse_quote( parser *p, knode *n, kp_match *m, statement *st ) {
+    if (n->want == '"') {
+        token *t = st->tokens + st->token_idx - 1;
+        uint8_t *stop  = get_char_pair( t->ptr, t->size );
+        uint8_t *quote = gsd_parse_slurp_until( p, stop, 1 );
+        free(stop);
+        if (!quote) return 0;
+        m->match.str = quote;
+        return 1;
+    }
+
+    // Get possible delimeters
+    // check for delimeter
+    // do the slurp
+    return 0;
 }
 
 int gsd_parse_list( parser *p, knode *n, kp_match *m, statement *st ) {

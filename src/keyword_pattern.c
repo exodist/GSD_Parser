@@ -59,7 +59,7 @@ kparser *gsd_keyword_pattern_normalize(uint8_t *pattern) {
     if (!ps) return NULL;
 
     size_t len = strlen(pattern);
-    uint8_t *new = malloc(len);
+    uint8_t *new = malloc(len + 1);
     if (!new) {
         ps->error = ERROR_MEMORY;
         return ps;
@@ -85,6 +85,7 @@ kparser *gsd_keyword_pattern_normalize(uint8_t *pattern) {
         return ps;
     }
 
+    new[ni] = '\0';
     ps->pattern = new;
     ps->ptr = new;
     return ps;
@@ -138,6 +139,7 @@ knode *gsd_keyword_pattern_atom(kparser *p) {
     if (! gsd_keyword_pattern_valid_atom(*(p->ptr))) {
         p->error = ERROR_KEYWORD;
         p->error_msg = "Invalid atom in keyword pattern";
+        p->error_src = p->ptr;
         return NULL;
     }
 

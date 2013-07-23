@@ -72,6 +72,7 @@ struct kparser {
 
     parse_error error;
     const uint8_t *error_msg;
+    uint8_t *error_src;
 };
 
 struct knode {
@@ -105,6 +106,7 @@ struct parser {
 
     parse_error error;
     const uint8_t *error_msg;
+    uint8_t *error_src;
 };
 
 struct token {

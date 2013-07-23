@@ -22,6 +22,7 @@ int gsd_parse_keyword( parser *p, void *keyword, statement *s ) {
     if (!n) {
         p->error     = kp->error;
         p->error_msg = kp->error_msg;
+        p->error_src = kp->error_src;
         free_kparser(kp);
         return -1;
     }
@@ -43,7 +44,6 @@ int gsd_parse_keyword( parser *p, void *keyword, statement *s ) {
     //if ( matches[midx].node->want == 't' ) out = 1;
 
     free(matches);
-    free_knode(n);
 
     return out;
 }
