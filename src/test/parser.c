@@ -10,6 +10,7 @@ void bm(void *m, block *b) {}
 void *kc(parser *p, token *t) {
     if (*(t->ptr) == '"') return (void *)"\"";
     if (*(t->ptr) == 'Q') return (void *)"q{'|-}";
+    if (*(t->ptr) == 'R') return (void *)"q";
     if (*(t->ptr) == '{') return (void *)"c";
     if (*(t->ptr) == 'S') return (void *)"b";
     return NULL;
@@ -22,19 +23,22 @@ uint8_t *kp(parser *p, void *k) {
 void kr(parser *p, void *k, statement *s, kp_match *m) {
     while (m->node) {
         if (m->node->want == 'b') {
-            printf( "Grabbed block:\n" );
+            printf( "\nGrabbed block:\n" );
             dump_block( m->match.blk, 4 );
             //s->token_idx--;
             //memset( s->tokens + s->token_idx, 0, sizeof(token) );
         }
         else if ( m->node->want == 'c' ) {
-            printf( "Matched block\n" );
+            printf( "\nMatched block\n" );
         }
         else if ( m->node->want == '"' ) {
-            printf( "Matched quote:\n*****\n%s\n*****\n", m->match.str );
+            printf( "\nMatched quote\n" );
+        }
+        else if ( m->node->want == 'q' ) {
+            printf( "\nGrabbed quote:\n*****\n%s\n*****\n", m->match.str );
         }
         else {
-            printf( "Matched Something\n" );
+            printf( "\nMatched Something ??\n" );
         }
         m++;
     }
@@ -69,9 +73,11 @@ void test_quote() {
         .ptr  = NULL,
         .code = "foo bar baz \"\n"
                 "inside; \\\\ the \\\"quote\\\"\n"
-                "Still in it\" out;\n"
+                "Still '\0' \\n in it\" out;\n"
+                "R 'fun run';\n"
                 "Q -foo bar-;\n"
-                "Q 'baz bat';\n",
+                "Q 'baz bat';\n"
+                "Q |big ben|;\n",
 
         .push = bm,
         .pop  = bm,
