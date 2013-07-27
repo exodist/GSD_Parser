@@ -1,134 +1,185 @@
-#ifndef STRUCTURES_H
-#define STRUCTURES_H
+#ifndef GSD_PARSER_STRUCTURES_H
+#define GSD_PARSER_STRUCTURES_H
 
-#include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
 
-typedef struct block        block;
-typedef struct dict         dict;
-typedef struct knode        knode;
-typedef struct kparser      kparser;
-typedef struct parser       parser;
-typedef struct statement    statement;
-typedef struct token        token;
-typedef struct kp_match     kp_match;
-typedef struct knode_stack  knode_stack;
-typedef struct pattern_type pattern_type;
+#include "GSD_Dict/src/include/gsd_dict.h"
+#include "GSD_Dict/src/include/gsd_dict_return.h"
 
-typedef void     (block_mod)(void *meta, block *b);
-typedef void    *(keyword_check)(parser *p, token *t);
-typedef uint8_t *(keyword_pattern)(parser *p, void *k);
-typedef void     (keyword_run)(parser *p, void *k, statement *s, kp_match *matches);
+typedef struct parser parser;
 
-typedef enum {
-    NONE_C = 0,
-    SPACE_C,
-    WORD_C,
-    SYM_C,
-    CONTROL_C,
-    TERM_C
-} chartype;
+typedef struct parser_atom      parser_atom;
+typedef struct parser_block     parser_block;
+typedef struct parser_config    parser_config;
+typedef struct parser_error     parser_error;
+typedef struct parser_pattern   parser_pattern;
+typedef struct parser_quote     parser_quote;
+typedef struct parser_snip      parser_snip;
+typedef struct parser_state     parser_state;
+typedef struct parser_statement parser_statement;
+typedef struct parser_token     parser_token;
 
-typedef enum {
-    ERROR_NONE = 0,
-    ERROR_MEMORY,
-    ERROR_SYNTAX,
-    ERROR_KEYWORD,
-    ERROR_OTHER
-} parse_error;
+typedef struct parser_pattern_match parser_pattern_match;
+typedef struct parser_pattern_node  parser_pattern_node;
 
-struct kp_match {
-    knode   *node;
-    size_t   match_size;
-    union {
-        uint8_t *str;
-        block   *blk;
-    } match;
+typedef int(parser_block_callback)(parser *p, parser_block *b, uint8_t **symbols, size_t symbols_count);
+typedef parser_pattern *(parser_keyword_check)(parser *p, parser_token *t);
+
+struct parser_snip {
+    uint8_t *string;
+    size_t   size;
+    size_t   idx;
 };
 
-struct knode_stack {
-    knode_stack *parent;
-    size_t idx;
-    size_t alt;
-    size_t cnt;
-    knode *node;
-    uint8_t *ptr;
+struct parser_state {
+    size_t pos;
+    size_t line;
+    parser_block *current;
 };
 
-struct pattern_type {
+struct parser_error {
     enum {
-        PTYPE_KPARSER = 0,
-        PTYPE_KNODE   = 1
-    } type : 32;
+        PARSER_ERROR_NONE = 0,
+        PARSER_ERROR_MEMORY,
+        PARSER_ERROR_SYNTAX,
+        PARSER_ERROR_OTHER
+    } category;
 
-    int32_t refcount;
+    const uint8_t *message;
+    parser_state   state;
 };
 
-struct kparser {
-    pattern_type type;
+struct parser_config {
+    void *meta;
+    parser_keyword_check  *check;
+    parser_block_callback *push;
+    parser_block_callback *pop;
 
-    uint8_t *pattern;
-    uint8_t *ptr;
-
-    parse_error error;
-    const uint8_t *error_msg;
-    uint8_t *error_src;
-};
-
-struct knode {
-    pattern_type type;
-
-    uint8_t want;
-    uint8_t mod;
-
-    knode *next;
-
-    union {
-        knode   **alt;
-        uint8_t  *match;
-        uint8_t  *delim;
-        uint8_t **syms;
-    } data;
+    uint8_t **terminators;
+    uint8_t   terminators_count;
 };
 
 struct parser {
-    void *meta;
+    parser_state  state;
+    parser_config config;
+
+    uint8_t *filename;
     uint8_t *code;
 
-    uint8_t *ptr;
+    parser_block *root;
 
-    block_mod *push;
-    block_mod *pop;
+    parser_error *error;
 
-    keyword_check   *kcheck;
-    keyword_pattern *kpatt;
-    keyword_run     *krun;
+    dict *patterns;
+    dict *pattern_cache;
 
-    parse_error error;
-    const uint8_t *error_msg;
-    uint8_t *error_src;
+    void *meta;
 };
 
-struct token {
+struct parser_block {
+    parser_block *parent;
+
+    parser_statement *statements;
+    size_t     statements_size;
+    size_t     statement_idx;
+
+    uint8_t *filename;
+    size_t   start_line;
+    size_t   end_line;
+
+    void *meta;
+};
+
+struct parser_statement {
+    parser_atom *atoms;
+    size_t       atoms_size;
+    size_t       atom_idx;
+
+    uint8_t *filename;
+    size_t   end_line;
+    size_t   start_line;
+};
+
+struct parser_atom {
+    enum {
+        ATOM_TOKEN,
+        ATOM_QUOTE,
+        ATOM_BLOCK,
+        ATOM_INLINE,
+    } type;
+
+    union {
+        parser_token *token;
+        parser_block *block;
+        parser_quote *quote;
+    } value;
+};
+
+struct parser_quote {
+    uint8_t *value;
     size_t   size;
-    size_t   count;
-    uint8_t *ptr;
-    block   *block;
-    uint8_t  space_prefix;
-    uint8_t  space_postfix;
-    uint8_t  is_string;
+    size_t   length;
+
+    uint8_t *delimiter;
+    size_t   delimiter_size;
+    size_t   delimiter_length;
 };
 
-struct statement {
-    size_t     token_count;
-    size_t     token_idx;
-    token     *tokens;
-    statement *next;
+struct parser_token {
+    uint8_t *value;
+    size_t   size;
+    size_t   length;
 };
 
-struct block {
-    statement *statements;
-    dict      *symbols;
+struct parser_pattern {
+    uint8_t *raw;
+    size_t   raw_size;
+
+    parser_pattern_node *nodes;
+    size_t               nodes_size;
+    size_t               node_idx;
+};
+
+struct parser_pattern_node {
+    enum {
+        NODE_MOD_NONE = 0,
+        NODE_MOD_MULTI,     // +
+        NODE_MOD_ANY,       // *
+        NODE_MOD_MAYBE      // ?
+    } mod;
+
+    enum {
+        NODE_WANT_TOKEN = 0,
+        NODE_WANT_MATCH,
+        NODE_WANT_BLOCK,
+        NODE_WANT_QUOTE,
+        NODE_WANT_ALT
+    } want;
+
+    union {
+        struct { parser_pattern_node *values; size_t count; } alt;
+        struct { int8_t *value;               size_t size;  } match;
+
+        struct {
+            uint8_t **delimiters;
+            size_t count;
+        } quote;
+
+        struct {
+            uint8_t **delimiters;
+            size_t    delimiters_count;
+
+            uint8_t **symbols;
+            size_t    symbols_count;
+        } block;
+    } data;
+};
+
+struct parser_pattern_match {
+    parser_pattern_node *node;
+    parser_atom         *atom;
 };
 
 #endif

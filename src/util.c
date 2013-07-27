@@ -1,98 +1,98 @@
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
+#include <unictype.h>
+#include <unistr.h>
+#include <unitypes.h>
+#include <assert.h>
 #include "util.h"
 
-void dump_knode( knode *n, uint8_t indent, uint8_t alt ) {
-    if (indent) {
-        uint8_t end = alt ? indent - 4 : indent;
+parser_snip parser_get_stop(parser_snip input) {
+    parser_snip out = {
+        .string = NULL,
+        .size   = input.size,
+        .idx    = 0
+    };
 
-        for( uint8_t x = 0; x < end; x++ ) {
-            printf( " " );
-        }
-
-        switch(alt) {
-            case 0:  break;
-            case 1:  printf( " -->" ); break;
-            default: printf( " ?->" );
-        }
+    out.string = malloc(out.size);
+    if (!out.string) {
+        out.size = 0;
+        return out;
     }
 
-    printf( "[ %c", n->want );
-    if (n->want == '(') printf(")");
+    size_t ii = input.idx;
+    size_t oi = 0;
+    while (ii < input.size) {
+        ucs4_t orig = 0;
+        int ilen = u8_mbtouc(&orig, input.string + ii, input.size - ii);
+        ii += ilen;
 
-    if (n->mod) printf( "%c", n->mod );
+        ucs4_t mirror = 0;
+        uc_mirror_char(orig, &mirror);
 
-    if ( n->want == '-' && n->data.match) {
-        printf( " ~ %s", n->data.match );
-    }
-    if ( n->want == 'q' ) {
-        if (n->data.match) {
-            printf( " ~ %s", n->data.match );
+        uint8_t miu8[4];
+        int olen = u8_uctomb(miu8, mirror, 4);
+
+        if (out.size - oi < olen) {
+            void *check = realloc(out.string, out.size + 16);
+            if (!check) {
+                free(out.string);
+                out.size = 0;
+                return out;
+            }
+            out.string = check;
+            out.size  += 16;
         }
-        else {
-            printf( " ~ '\"", n->data.match );
-        }
-    }
-    else if (n->want == 'b' && n->data.syms) {
-        printf( " ~ " );
-        for ( size_t i = 0; n->data.syms[i]; i++ ) {
-            if (i != 0) printf( ", " );
-            printf( "%s", n->data.syms[i] );
-        }
-    }
 
-    printf( " ]\n" );
-
-    if ( n->want == '(' ) {
-        uint8_t ind = indent + 4;
-        size_t i = 0;
-        while ( n->data.alt[i] != NULL ) {
-            dump_knode(n->data.alt[i++], ind, n->data.alt[1] ? 2 : 1);
+        for (int i = 0; i < olen; i++) {
+            out.string[oi++] = miu8[i];
         }
     }
 
-    if ( n->next ) {
-        dump_knode(n->next, indent, 0);
+    if (out.size > oi) {
+        void *check = realloc(out.string, oi);
+        if (!check) {
+            out.size = 0;
+            free(out.string)
+            return out;
+        }
+        out.string = check;
+        out.size = oi;
     }
+
+    return out;
 }
 
-void dump_token(token *t, int indent) {
-    if ( t->block ) {
-        dump_block( t->block, indent );
+parser_snip parser_reverse_snip(parser_snip input) {
+    parser_snip out = {
+        .string = NULL,
+        .size   = input.size - input.idx,
+        .idx    = 0
+    };
+    out.string = malloc(out.size);
+    if (!out.string) {
+        out.size = 0;
+        return out;
     }
-    else {
-        for (int i = 0; i < indent; i++) printf( " " );
-        printf( t->space_prefix  ? "+" : "-" );
-        printf( t->space_postfix ? "+" : "-" );
-        printf( " " );
 
-        if (t->is_string) printf( "\"" );
-        for( size_t i = 0; i < t->count; i++ ) {
-            printf( "%c", t->ptr[i] );
+    size_t ii = input.idx;
+    size_t oi = input.size;
+    while (ii < input.size) {
+        int len = u8_mblen(input.string + ii, input.size - ii);
+        assert(len);
+
+        oi -= len;
+        assert(oi >= 0);
+        for (int i = 0; i < len; i++) {
+            out.string[oi + i] = input.string[ii];
         }
-        if (t->is_string) printf( "\"" );
-        printf( "\n" );
+        ii += len;
     }
+
+    assert(oi == 0);
+
+    return out;
 }
 
-void dump_statement(statement *s, int indent) {
-    token *t = s->tokens;
-    for (int i = 0; i < indent; i++) printf( " " );
-    printf( "[\n" );
-    while( t->size ) dump_token(t++, indent + 2);
-    for (int i = 0; i < indent; i++) printf( " " );
-    printf( "]\n" );
-}
+int parser_check_stop(parser_snip input, parser_snip stop);
 
-void dump_block( block *b, int indent ) {
-    for (int i = 0; i < indent; i++) printf( " " );
-    printf( "{\n" );
-    statement *s = b->statements;
-    while (s != NULL) {
-        dump_statement(s, indent + 2);
-        s = s->next;
-    }
-    for (int i = 0; i < indent; i++) printf( " " );
-    printf( "}\n" );
-}
+parser_snip parser_slurp_until(parser_snip input, parser_snip stop);
+
+

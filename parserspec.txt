@@ -1,106 +1,70 @@
-Long Parsed Items
-b  - block, { ... }
-"  - quote
-l  - list, comma seperated items, keywords processed
-L  - parameter list, same as list, but surrounded by parentheses
-s  - Signature
-S  - Signature in parentheses
-q  - quoted text, quote delimiters allowed listed in brackets, quote used is passed to keyword
-c  - code
-C  - code in parentheses
-.  - Slurp to end of line, or to item in {}
-D  - Delimiter specified at use, (must occur twice at minimum, special handling for open/close things)
+== Primitives ==
+"" or '' (LITERAL) - Specify a literal thing to match, the quote character can
+                     be escaped to use it inside the literal using backslash
+{...} (BLOCK)      - Specify a block, space seperated items inside the braces
+                     are arguments to provide to the block push. Custom
+                     delimiter(s) can be specified with [...] or <...>. Default
+                     delimiter is '{'.
+TOKEN              - (NUMBER|UALPHANUM|SYMBOL)
+QUOTE              - Grab quote based on delimiters. Default delimiters are '
+                     and "
+DELIM              - Delimited stucture, grab parts between delimiters.
+                     Delimiter is first non-space character after the keyword.
+                     If [...] or <...> are specified they provide extra
+                     delimiters that can be used to quote the delimiter so that
+                     you can use a multi-character delimiter.
+CONTROL            - A non-SYMBOL non-UALPHANUM non-SPACE character sequence
+                     (\0, etc)
+SYMBOL             - Non alphanumerc character sequence that is also not control
+                     characters or space. Underscore can be used, but not as
+                     the first character.
+NUMBER             - Alphanumeric character sequence that starts with a number,
+                     may also include a single decimal. Underscore is not
+                     allowed.
+ALPHA              - Alphabetic character sequence (does not include
+                     underscore)
+ALPHANUM           - Sequnece of alphabetic or numeric characters, not starting
+                     with a numeric character. Underscore is not allowed.
+UALPHANUM          - Same as ALPHANUM except that underscore is allowed
+SPACE              - Sequence of whitespace characters (including newline)
+NOSPACE            - Used to specify that whitespace is not allowed here
 
-Simple Items
-w  - word, alphanumeric starting with alpha
-n  - number, alphanumeric starting with number
-_  - whitespace
+== Constructs ==
 
-Positioning
-<  - grab item before keyword in this statement
->  - grab item before keyword if it is not followed by a space
-/  - NoWhitespace
+(x|y|z) this or that or that, first match is used, left to right ordering.
 
-Extra Behavior
-t       - terminate statement here
-{...}   - Data, Symbols to make available (used in blocks, code, parameter list, etc)
+== Modifiers ==
++ - one or more
+? - optional
+* - any quantity
 
-Modifiers
-?     - Optional
-*     - Any number
-+     - One or more
+== Delimiters ==
+NOTE: In all cases paired characters are swapped with their pair for the closing side
+NOTE: For the 'DELIM' primitive this specifies characters allowed to quote long delimiters
+[...] - allowed delimiter(s) for quotes (space separated) (example: -{ ... -})
+<...> - Same as [...] except that closing delimiter is reverse of opening (example -{ ... }-)
 
-Constructs
-(|) - this or that
+== Custom ==
 
---------------------------
+You can name patterns and use them inside other patterns. Pattern names must be
+all lowercase alphanumerc and underscore.
 
-"           '"'
-'           '"'
-`           '"'
+== SHORT FORM NOT ALLOWED ==
 
-++          '(/C|/w|>)'    Grab paren item after if no space, next token if no
---          '(/C|/w|>)'    space, otherwise previous item if no space.
+This is what a short-form would look like:
 
-::          '>w (-::- w)*'
+""
+{}
+T
+Q
+D
+C
+S
+N
+A
+AN
+UAN
+SP
+NSP
 
-{           "c -}-"
-[           "l -]-"
-(           "c -)-"
-[[          "l -]]-"
-
-func        'w S? b t'
-meth        'w S? b t'
-sub         'b'
-type        'w C? b{meth,with,has} t'
-
-fennec      '(l|q) L? b t'
-
-#######
-    var thing x(...)
-    var thing x(...), y(...)
-    var thing x 1, y 1
-    var thing x "...", y "..."
-
-    var thing x, y;
-    var thing x, y = ...;
-
-    var thing x;
-    var thing x = ...;
-
-    var x, y;
-    var x, y = ...
-
-    var x;
-    var x = ...;
-
-var         '( (w (w (n|q|L)-,-)* (n|q|L)-,-?) -;- | ((w l)|(w w)|l|w) (-;-|-=-) )'
-#######
-
-sigil       '/(w | -{- (w|q) -}- )'
-
-q           'DD'
-qq          'DD'
-s           'DDD'
-
-->          'w <'
-+>          'w'
-~>          'w < w'
-
-]=[         'c -]-'
-
-//          '.'
-
-unless      '(<+ c|(c b|C b) t)'
-if          '(<+ c|((c b|C b) (-elsif- (c b|C b))* (-else- b)? t))'
-
-while       '(<+ c|(c b|C b) t)'
-until       '(<+ c|(c b|C b) t)'
-
-for         '(  <+ w (L|(w,)* w,?)    |   w (L|(w,)* w,?) b  )'
-
-load        '(w (-::- w)*|q)'
-
-try         'b (-catch- C b)? (-finally- b)? t'
-
-keyword     'w q b'
+Readability there is horrible, learn to type faster instead.
