@@ -5,7 +5,6 @@
                      are arguments to provide to the block push. Custom
                      delimiter(s) can be specified with [...] or <...>. Default
                      delimiter is '{'.
-TOKEN              - (NUMBER|UALPHANUM|SYMBOL)
 QUOTE              - Grab quote based on delimiters. Default delimiters are '
                      and "
 DELIM              - Delimited stucture, grab parts between delimiters.
@@ -37,17 +36,33 @@ NOSPACE            - Used to specify that whitespace is not allowed here
 + - one or more
 ? - optional
 * - any quantity
+^ - do a keyword check
 
 == Delimiters ==
-NOTE: In all cases paired characters are swapped with their pair for the closing side
-NOTE: For the 'DELIM' primitive this specifies characters allowed to quote long delimiters
-[...] - allowed delimiter(s) for quotes (space separated) (example: -{ ... -})
-<...> - Same as [...] except that closing delimiter is reverse of opening (example -{ ... }-)
+NOTE: In all cases paired characters are swapped with their pair for the
+      closing side
+NOTE: For the 'DELIM' primitive this specifies characters allowed to quote long
+      delimiters
+[...] - allowed opening delimiter(s) for quotes (space separated)
+        The closing delimiter is the same as the opening except with paired
+        chacters such as '{' swapped with their pair. To specify a closing
+        delimiter, seperate the opening and the closing with a '/' (no
+        whitespace). If you wish to use a literal '/' you must escape it with
+        '\'.
+<...> - Same as [...] except that closing delimiter has all the characters
+        reversed from the opening. Paired characters are still replaced with
+        their reflection.
 
 == Custom ==
 
 You can name patterns and use them inside other patterns. Pattern names must be
 all lowercase alphanumerc and underscore.
+
+== Example ==
+
+This would be the pattern for a GSD file:
+
+    (';'|'\n'|NUMBER|QUOTE[' " `]|{}|SYMBOL^|UALPHANUM^)*
 
 == SHORT FORM NOT ALLOWED ==
 
@@ -68,3 +83,9 @@ SP
 NSP
 
 Readability there is horrible, learn to type faster instead.
+Ant of disapproval:
+ \/                /\_/\
+("")(===)(=)     _/   \ |
+ {} /\ /\    ___/   /|   \_
+------------/ /   / /  \ \ \
+

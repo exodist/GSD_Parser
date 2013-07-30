@@ -4,13 +4,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include "GSD_Dict/src/include/gsd_dict.h"
 #include "GSD_Dict/src/include/gsd_dict_return.h"
 
 typedef struct parser parser;
 
-typedef struct parser_atom      parser_atom;
 typedef struct parser_block     parser_block;
 typedef struct parser_config    parser_config;
 typedef struct parser_error     parser_error;
@@ -18,7 +18,6 @@ typedef struct parser_pattern   parser_pattern;
 typedef struct parser_quote     parser_quote;
 typedef struct parser_snip      parser_snip;
 typedef struct parser_state     parser_state;
-typedef struct parser_statement parser_statement;
 typedef struct parser_token     parser_token;
 
 typedef struct parser_pattern_match parser_pattern_match;
@@ -59,21 +58,20 @@ struct parser_config {
 
     uint8_t **terminators;
     uint8_t   terminators_count;
+
+    dict *patterns;
+    dict *pattern_cache;
 };
 
 struct parser {
-    parser_state  state;
     parser_config config;
 
     uint8_t *filename;
     uint8_t *code;
 
     parser_block *root;
-
     parser_error *error;
-
-    dict *patterns;
-    dict *pattern_cache;
+    parser_state *state;
 
     void *meta;
 };
@@ -81,40 +79,14 @@ struct parser {
 struct parser_block {
     parser_block *parent;
 
-    parser_statement *statements;
-    size_t     statements_size;
-    size_t     statement_idx;
-
     uint8_t *filename;
     size_t   start_line;
     size_t   end_line;
+
+    parser_pattern_match **content;
+    size_t                 content_count;
 
     void *meta;
-};
-
-struct parser_statement {
-    parser_atom *atoms;
-    size_t       atoms_size;
-    size_t       atom_idx;
-
-    uint8_t *filename;
-    size_t   end_line;
-    size_t   start_line;
-};
-
-struct parser_atom {
-    enum {
-        ATOM_TOKEN,
-        ATOM_QUOTE,
-        ATOM_BLOCK,
-        ATOM_INLINE,
-    } type;
-
-    union {
-        parser_token *token;
-        parser_block *block;
-        parser_quote *quote;
-    } value;
 };
 
 struct parser_quote {
@@ -147,14 +119,24 @@ struct parser_pattern_node {
         NODE_MOD_NONE = 0,
         NODE_MOD_MULTI,     // +
         NODE_MOD_ANY,       // *
-        NODE_MOD_MAYBE      // ?
+        NODE_MOD_MAYBE,     // ?
+        NODE_MOD_KCHECK     // ^
     } mod;
 
     enum {
-        NODE_WANT_TOKEN = 0,
-        NODE_WANT_MATCH,
+        NODE_WANT_ALPHA,
+        NODE_WANT_ALPHANUM,
         NODE_WANT_BLOCK,
+        NODE_WANT_CONTROL,
+        NODE_WANT_DELIM,
+        NODE_WANT_INLINE,
+        NODE_WANT_NOSPACE,
+        NODE_WANT_NUMBER,
         NODE_WANT_QUOTE,
+        NODE_WANT_SPACE,
+        NODE_WANT_SYMBOL,
+        NODE_WANT_TOKEN,
+        NODE_WANT_UALPHANUM,
         NODE_WANT_ALT
     } want;
 
@@ -178,8 +160,29 @@ struct parser_pattern_node {
 };
 
 struct parser_pattern_match {
-    parser_pattern_node *node;
-    parser_atom         *atom;
+    enum {
+        MATCH_ALPHA,
+        MATCH_ALPHANUM,
+        MATCH_BLOCK,
+        MATCH_CONTROL,
+        MATCH_DELIM,
+        MATCH_INLINE,
+        MATCH_NOSPACE,
+        MATCH_NUMBER,
+        MATCH_QUOTE,
+        MATCH_SPACE,
+        MATCH_SYMBOL,
+        MATCH_TOKEN,
+        MATCH_UALPHANUM
+    } type;
+
+    union {
+        parser_token *token;
+        parser_block *block;
+        parser_quote *quote;
+        parser_snip  *snip;
+    } value;
 };
 
 #endif
+

@@ -10,7 +10,7 @@
 parser_snip parser_get_stop(parser_snip input);
 parser_snip parser_reverse_snip(parser_snip input);
 
-int parser_check_stop(parser_snip input, parser_snip stop);
+int parser_check_stop(parser_snip input, parser_snip stop, size_t offset);
 
 parser_snip parser_slurp_until(parser_snip input, parser_snip stop);
 

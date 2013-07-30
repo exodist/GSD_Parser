@@ -50,7 +50,7 @@ parser_snip parser_get_stop(parser_snip input) {
         void *check = realloc(out.string, oi);
         if (!check) {
             out.size = 0;
-            free(out.string)
+            free(out.string);
             return out;
         }
         out.string = check;
@@ -81,7 +81,7 @@ parser_snip parser_reverse_snip(parser_snip input) {
         oi -= len;
         assert(oi >= 0);
         for (int i = 0; i < len; i++) {
-            out.string[oi + i] = input.string[ii];
+            out.string[oi + i] = input.string[ii + i];
         }
         ii += len;
     }
@@ -91,8 +91,29 @@ parser_snip parser_reverse_snip(parser_snip input) {
     return out;
 }
 
-int parser_check_stop(parser_snip input, parser_snip stop);
+int parser_check_stop(parser_snip input, parser_snip stop, size_t offset) {
+    size_t a = input.size - (input.idx + offset);
+    size_t b = stop.size  - stop.idx;
+    for(size_t i = 0; i < a && i < b; i++) {
+        if (input.string[input.idx + i + offset] != stop.string[stop.idx + i])
+            return 0;
+    }
 
-parser_snip parser_slurp_until(parser_snip input, parser_snip stop);
+    return 1;
+}
 
+parser_snip parser_slurp_until(parser_snip input, parser_snip stop) {
+    parser_snip out = input;
+    out.size = out.idx + 1;
+    for (size_t i = 0; out.size <= input.size; i++) {
+        if (parser_check_stop(input, stop, i))
+            return out;
+        out.size++;
+    }
 
+    out.idx    = 0;
+    out.size   = 0;
+    out.string = NULL;
+
+    return out;
+}
