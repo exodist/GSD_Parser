@@ -36,7 +36,10 @@ NOSPACE            - Used to specify that whitespace is not allowed here
 + - one or more
 ? - optional
 * - any quantity
+
+== Flags ==
 ^ - do a keyword check
+# - do not capture
 
 == Delimiters ==
 NOTE: In all cases paired characters are swapped with their pair for the
@@ -62,7 +65,7 @@ all lowercase alphanumerc and underscore.
 
 This would be the pattern for a GSD file:
 
-    (';'|'\n'|NUMBER|QUOTE[' " `]|{}|SYMBOL^|UALPHANUM^)*
+    (';'|'\n'|NUMBER|QUOTE[' " `]|{}|^SYMBOL|^UALPHANUM)*
 
 == SHORT FORM NOT ALLOWED ==
 

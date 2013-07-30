@@ -18,13 +18,12 @@ typedef struct parser_pattern   parser_pattern;
 typedef struct parser_quote     parser_quote;
 typedef struct parser_snip      parser_snip;
 typedef struct parser_state     parser_state;
-typedef struct parser_token     parser_token;
 
 typedef struct parser_pattern_match parser_pattern_match;
 typedef struct parser_pattern_node  parser_pattern_node;
 
 typedef int(parser_block_callback)(parser *p, parser_block *b, uint8_t **symbols, size_t symbols_count);
-typedef parser_pattern *(parser_keyword_check)(parser *p, parser_token *t);
+typedef parser_pattern *(parser_keyword_check)(parser *p, parser_snip *s);
 
 struct parser_snip {
     uint8_t *string;
@@ -69,9 +68,9 @@ struct parser {
     uint8_t *filename;
     uint8_t *code;
 
+    parser_state *state;
     parser_block *root;
     parser_error *error;
-    parser_state *state;
 
     void *meta;
 };
@@ -99,12 +98,6 @@ struct parser_quote {
     size_t   delimiter_length;
 };
 
-struct parser_token {
-    uint8_t *value;
-    size_t   size;
-    size_t   length;
-};
-
 struct parser_pattern {
     uint8_t *raw;
     size_t   raw_size;
@@ -117,11 +110,15 @@ struct parser_pattern {
 struct parser_pattern_node {
     enum {
         NODE_MOD_NONE = 0,
-        NODE_MOD_MULTI,     // +
-        NODE_MOD_ANY,       // *
-        NODE_MOD_MAYBE,     // ?
-        NODE_MOD_KCHECK     // ^
+        NODE_MOD_MULTI, // +
+        NODE_MOD_ANY,   // *
+        NODE_MOD_MAYBE  // ?
     } mod;
+
+    struct {
+        uint8_t no_capture;
+        uint8_t keyword_check;
+    } flags;
 
     enum {
         NODE_WANT_ALPHA,
@@ -135,7 +132,6 @@ struct parser_pattern_node {
         NODE_WANT_QUOTE,
         NODE_WANT_SPACE,
         NODE_WANT_SYMBOL,
-        NODE_WANT_TOKEN,
         NODE_WANT_UALPHANUM,
         NODE_WANT_ALT
     } want;
@@ -161,6 +157,7 @@ struct parser_pattern_node {
 
 struct parser_pattern_match {
     enum {
+        MATCH_NONE = 0,
         MATCH_ALPHA,
         MATCH_ALPHANUM,
         MATCH_BLOCK,
@@ -172,16 +169,19 @@ struct parser_pattern_match {
         MATCH_QUOTE,
         MATCH_SPACE,
         MATCH_SYMBOL,
-        MATCH_TOKEN,
         MATCH_UALPHANUM
     } type;
 
     union {
-        parser_token *token;
         parser_block *block;
         parser_quote *quote;
         parser_snip  *snip;
     } value;
+
+    struct {
+        uint8_t space_prefix;
+        uint8_t space_postfix;
+    } flags;
 };
 
 #endif
