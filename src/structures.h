@@ -123,34 +123,44 @@ struct parser_pattern_node {
     enum {
         NODE_WANT_ALPHA,
         NODE_WANT_ALPHANUM,
+        NODE_WANT_ALT,
         NODE_WANT_BLOCK,
         NODE_WANT_CONTROL,
         NODE_WANT_DELIM,
         NODE_WANT_INLINE,
+        NODE_WANT_NAMED,
         NODE_WANT_NOSPACE,
         NODE_WANT_NUMBER,
         NODE_WANT_QUOTE,
         NODE_WANT_SPACE,
         NODE_WANT_SYMBOL,
-        NODE_WANT_UALPHANUM,
-        NODE_WANT_ALT
+        NODE_WANT_UALPHANUM
     } want;
 
     union {
-        struct { parser_pattern_node *values; size_t count; } alt;
-        struct { int8_t *value;               size_t size;  } match;
+        parser_snip match;
 
         struct {
-            uint8_t **delimiters;
+            parser_pattern_node *values;
             size_t count;
+        } alt;
+
+        struct {
+            parser_snip *delimiters;
+            size_t       delimiters_count;
         } quote;
 
         struct {
-            uint8_t **delimiters;
-            size_t    delimiters_count;
+            parser_snip    *name;
+            parser_pattern *pattern;
+        } named;
 
-            uint8_t **symbols;
-            size_t    symbols_count;
+        struct {
+            parser_snip *delimiters;
+            size_t       delimiters_count;
+
+            parser_snip **symbols;
+            size_t        symbols_count;
         } block;
     } data;
 };

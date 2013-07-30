@@ -46,31 +46,67 @@ NOTE: In all cases paired characters are swapped with their pair for the
       closing side
 NOTE: For the 'DELIM' primitive this specifies characters allowed to quote long
       delimiters
-[...] - allowed opening delimiter(s) for quotes (space separated)
-        The closing delimiter is the same as the opening except with paired
-        chacters such as '{' swapped with their pair. To specify a closing
-        delimiter, seperate the opening and the closing with a '/' (no
-        whitespace). If you wish to use a literal '/' you must escape it with
-        '\'.
+[...] - allowed opening delimiter(s) for quotes (space separated, quoted with ' or ")
+        a '/' may be used to seperate opening and closing if you want to
+        specify one of each instead of multiple openings. Otherwise closing is
+        the same as the opening except with mirrorable character mirrored.
 <...> - Same as [...] except that closing delimiter has all the characters
         reversed from the opening. Paired characters are still replaced with
-        their reflection.
+        their reflection. You cannot use '/' to seperate opening and closing in
+        <...>.
 
 == Custom ==
 
 You can name patterns and use them inside other patterns. Pattern names must be
 all lowercase alphanumerc and underscore.
 
+Named patterns may be self-recursive, and can use names that are not yet
+defined, binding occurs when needed, not at compile-time.
+
 == Example ==
 
 This would be the pattern for a GSD file:
 
-    (';'|'\n'|NUMBER|QUOTE[' " `]|{}|^SYMBOL|^UALPHANUM)*
+    (';'|'\n'|NUMBER|QUOTE["'" '"' '`']|{}|^SYMBOL|^UALPHANUM)*
+
+Pattern for patterns:
+
+    segment:
+        (
+            ( '#' | '^' )*
+            ( UALPHANUM | QUOTE['"' "'"] )
+        )
+        (
+            '['
+            ( QUOTE["'" '"'] '/' QUOTE["'" '"'] | QUOTE["'" '"']+ )
+            ']'
+
+            |
+
+            '<'
+            QUOTE["'" '"']+
+            '>'
+        )?
+        ( '?' | '+' | '*' )?
+
+    alternate:
+        '('
+        ( alternate | segment )+
+        (
+            '|'
+            ( alternate | segment )+
+        )+
+        ')'
+        ( '?' | '+' | '*' )?
+
+    pattern:
+        ( alternate | segment )+
 
 == SHORT FORM NOT ALLOWED ==
 
 This is what a short-form would look like:
 
+''
 ""
 {}
 T
