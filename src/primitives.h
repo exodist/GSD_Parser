@@ -7,6 +7,7 @@ parser_pattern_match parse_space    (parser *p);
 parser_pattern_match parse_control  (parser *p);
 parser_pattern_match parse_symbol   (parser *p);
 parser_pattern_match parse_number   (parser *p);
+parser_pattern_match parse_digit    (parser *p);
 parser_pattern_match parse_alpha    (parser *p);
 parser_pattern_match parse_alphanum (parser *p);
 parser_pattern_match parse_ualphanum(parser *p);

@@ -1,6 +1,7 @@
 #ifndef GSD_PARSER_STRUCTURES_H
 #define GSD_PARSER_STRUCTURES_H
 
+#include <unictype.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
@@ -8,6 +9,8 @@
 
 #include "GSD_Dict/src/include/gsd_dict.h"
 #include "GSD_Dict/src/include/gsd_dict_return.h"
+
+typedef struct char_info char_info;
 
 typedef struct parser parser;
 
@@ -64,13 +67,14 @@ struct parser_config {
 
 struct parser {
     parser_config config;
+    parser_state  state;
+    parser_error  error;
 
-    uint8_t *filename;
-    uint8_t *code;
+    uint8_t *name;
+    uint8_t *text;
+    size_t   length;
 
-    parser_state *state;
     parser_block *root;
-    parser_error *error;
 
     void *meta;
 };
@@ -115,24 +119,27 @@ struct parser_pattern_node {
         NODE_MOD_MAYBE  // ?
     } mod;
 
-    struct {
-        uint8_t no_capture;
-        uint8_t keyword_check;
-    } flags;
+    uint8_t no_capture;
+    uint8_t keyword_check;
+    size_t  number;
 
     enum {
+        NODE_WANT_NONE = 0,
         NODE_WANT_ALPHA,
         NODE_WANT_ALPHANUM,
         NODE_WANT_ALT,
         NODE_WANT_BLOCK,
         NODE_WANT_CONTROL,
         NODE_WANT_DELIM,
+        NODE_WANT_DIGIT,
+        NODE_WANT_END,
         NODE_WANT_INLINE,
         NODE_WANT_NAMED,
         NODE_WANT_NOSPACE,
         NODE_WANT_NUMBER,
         NODE_WANT_QUOTE,
         NODE_WANT_SPACE,
+        NODE_WANT_START,
         NODE_WANT_SYMBOL,
         NODE_WANT_UALPHANUM
     } want;
@@ -173,25 +180,43 @@ struct parser_pattern_match {
         MATCH_BLOCK,
         MATCH_CONTROL,
         MATCH_DELIM,
+        MATCH_DIGIT,
+        MATCH_END,
         MATCH_INLINE,
         MATCH_NOSPACE,
         MATCH_NUMBER,
         MATCH_QUOTE,
         MATCH_SPACE,
+        MATCH_START,
         MATCH_SYMBOL,
         MATCH_UALPHANUM
     } type;
 
     union {
         parser_block *block;
-        parser_quote *quote;
-        parser_snip  *snip;
+        parser_quote  quote;
+        parser_snip   snip;
     } value;
 
     struct {
         uint8_t space_prefix;
         uint8_t space_postfix;
     } flags;
+};
+
+struct char_info {
+    ucs4_t  ucs4;
+    uint8_t utf8[4];
+    uint8_t utf8_length;
+
+    enum {
+        CHAR_INVALID = 0,
+        CHAR_WHITESPACE, // Z
+        CHAR_ALPHABETIC, // L
+        CHAR_NUMERIC,    // Nd
+        CHAR_SYMBOL,     // P or S or M or Nl or No
+        CHAR_CONTROL,    // C
+    } type;
 };
 
 #endif

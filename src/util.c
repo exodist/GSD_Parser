@@ -117,3 +117,50 @@ parser_snip parser_slurp_until(parser_snip input, parser_snip stop) {
 
     return out;
 }
+
+char_info parser_char_info(uint8_t *start, size_t length) {
+    char_info out = {
+        .ucs4 = 0,
+        .utf8 = { 0, 0, 0, 0 },
+        .utf8_length = 0,
+        .type = CHAR_INVALID,
+    };
+
+    if (!length) return out;
+    if (!start)  return out;
+
+    out.utf8_length = u8_mbtouc(&(out.ucs4), start, length);
+    assert( out.utf8_length <= 4 );
+    for (int i = 0; i < out.utf8_length; i++) {
+        out.utf8[i] = start[i];
+    }
+
+    switch(out.ucs4) {
+        case ' ':
+        case '\t':
+        case '\n':
+        case '\r':
+            out.type = CHAR_WHITESPACE;
+        break;
+    }
+
+    if (out.type == CHAR_INVALID) {
+        if (uc_is_general_category(out.ucs4, UC_CATEGORY_L)) {
+            out.type = CHAR_ALPHABETIC;
+        }
+        else if (uc_is_general_category(out.ucs4, UC_CATEGORY_Nd)) {
+            out.type = CHAR_NUMERIC;
+        }
+        else if (uc_is_general_category(out.ucs4, UC_CATEGORY_Z)) {
+            out.type = CHAR_WHITESPACE;
+        }
+        else if (uc_is_general_category(out.ucs4, UC_CATEGORY_C)){
+            out.type = CHAR_CONTROL;
+        }
+        else {
+            out.type = CHAR_SYMBOL;
+        }
+    }
+
+    return out;
+}

@@ -17,16 +17,21 @@ CONTROL            - A non-SYMBOL non-UALPHANUM non-SPACE character sequence
 SYMBOL             - Non alphanumerc character sequence that is also not control
                      characters or space. Underscore can be used, but not as
                      the first character.
+ALPHA              - Alphabetic character sequence (does not include underscore)
+DIGIT              - Numeric digit (0-9) sequence
 NUMBER             - Alphanumeric character sequence that starts with a number,
                      may also include a single decimal. Underscore is not
                      allowed.
-ALPHA              - Alphabetic character sequence (does not include
-                     underscore)
 ALPHANUM           - Sequnece of alphabetic or numeric characters, not starting
                      with a numeric character. Underscore is not allowed.
 UALPHANUM          - Same as ALPHANUM except that underscore is allowed
 SPACE              - Sequence of whitespace characters (including newline)
-NOSPACE            - Used to specify that whitespace is not allowed here
+
+== Behavior ==
+
+^   - Start of string
+$   - End of string
+!   - Used to specify that whitespace is not allowed here
 
 == Constructs ==
 
@@ -38,7 +43,7 @@ NOSPACE            - Used to specify that whitespace is not allowed here
 * - any quantity
 
 == Flags ==
-^ - do a keyword check
+& - do a keyword check
 # - do not capture
 
 == Delimiters ==
@@ -67,40 +72,43 @@ defined, binding occurs when needed, not at compile-time.
 
 This would be the pattern for a GSD file:
 
-    (';'|'\n'|NUMBER|QUOTE["'" '"' '`']|{}|^SYMBOL|^UALPHANUM)*
+    ^ (';'|'\n'|NUMBER|QUOTE["'" '"' '`']|{}|&SYMBOL|&UALPHANUM)* $
 
 Pattern for patterns:
 
-    segment:
-        (
-            ( '#' | '^' )*
-            ( UALPHANUM | QUOTE['"' "'"] )
-        )
-        (
-            '['
-            ( QUOTE["'" '"'] '/' QUOTE["'" '"'] | QUOTE["'" '"']+ )
-            ']'
+    pattern:
+        ^ '^'? sequence+ '$'? $
 
+    flags:
+        ( '#^' | '^#' | '^' | '#' ) !
+
+    modifiers:
+        ! ( '?' | '+' | '*' )
+
+    token:
+        ( UALPHANUM | QUOTE['"' "'"] )
+
+    delimiters:
+        !
+        (
+            '[' ( token '/' token | token+ ) ']'
             |
+            '<' token+ '>'
+        )
 
-            '<'
-            QUOTE["'" '"']+
-            '>'
-        )?
-        ( '?' | '+' | '*' )?
+    segment:
+        flags?
+        ( DIGIT ! )?
+        ( token | '{' token* '}' | '!' )
+        delimiters?
+        modifiers?
 
     alternate:
-        '('
-        ( alternate | segment )+
-        (
-            '|'
-            ( alternate | segment )+
-        )+
-        ')'
-        ( '?' | '+' | '*' )?
+        '(' sequence+ ( '|' sequence+ )* ')'
+        modifiers?
 
-    pattern:
-        ( alternate | segment )+
+    sequence:
+        ( alternate | segment )
 
 == SHORT FORM NOT ALLOWED ==
 

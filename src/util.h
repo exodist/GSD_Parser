@@ -14,4 +14,6 @@ int parser_check_stop(parser_snip input, parser_snip stop, size_t offset);
 
 parser_snip parser_slurp_until(parser_snip input, parser_snip stop);
 
+char_info parser_char_info(uint8_t *start, size_t length);
+
 #endif
